@@ -1,0 +1,299 @@
+// Prisma Schema for Shree Kutch Kadwa Patidar Pandesara Mitra Mandal
+// Community Management Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  WIDOWED
+  DIVORCED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum EventStatus {
+  DRAFT
+  UPCOMING
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PAID
+  PENDING
+  PARTIAL
+  OVERDUE
+}
+
+enum PaymentMode {
+  CASH
+  UPI
+  BANK_TRANSFER
+  CHEQUE
+  ONLINE
+  OTHER
+}
+
+// ─── Admin / Auth ────────────────────────────────────────────────────────────
+
+model Admin {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(ADMIN)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  notices   Notice[]
+  events    Event[]
+  auditLogs AuditLog[]
+
+  @@map("admins")
+}
+
+// ─── Family ──────────────────────────────────────────────────────────────────
+
+model Family {
+  id         String   @id @default(cuid())
+  familyId   String   @unique
+  familyName String
+  kutchVatan String?
+  address    String?
+  city       String?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  members Member[]
+
+  @@index([familyId])
+  @@index([familyName])
+  @@index([kutchVatan])
+  @@index([city])
+  @@map("families")
+}
+
+// ─── Member ──────────────────────────────────────────────────────────────────
+
+model Member {
+  id            String         @id @default(cuid())
+  memberId      String         @unique
+  familyId      String
+  family        Family         @relation(fields: [familyId], references: [id])
+  fullName      String
+  gender        Gender
+  dob           DateTime?
+  phone         String?
+  email         String?
+  firmName      String?
+  designation   String?
+  education     String?
+  maritalStatus MaritalStatus?
+  bloodGroup    String?
+  joinedDate    DateTime       @default(now())
+  isActive      Boolean        @default(true)
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  annualFees    AnnualFee[]
+  eventPayments EventPayment[]
+
+  @@index([familyId])
+  @@index([fullName])
+  @@index([firmName])
+  @@index([isActive])
+  @@index([phone])
+  @@map("members")
+}
+
+// ─── Notices ─────────────────────────────────────────────────────────────────
+
+model Notice {
+  id            String    @id @default(cuid())
+  title         String
+  description   String
+  priority      Priority  @default(MEDIUM)
+  attachmentUrl String?
+  expiryDate    DateTime?
+  isVisible     Boolean   @default(true)
+  createdById   String
+  createdBy     Admin     @relation(fields: [createdById], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([priority])
+  @@index([isVisible])
+  @@index([createdAt])
+  @@map("notices")
+}
+
+// ─── Events ──────────────────────────────────────────────────────────────────
+
+model Event {
+  id            String      @id @default(cuid())
+  name          String
+  description   String?
+  date          DateTime
+  venue         String?
+  time          String?
+  organizer     String?
+  bannerUrl     String?
+  isFeeRequired Boolean     @default(false)
+  feeAmount     Float?
+  deadline      DateTime?
+  maxAttendees  Int?
+  status        EventStatus @default(DRAFT)
+  createdById   String
+  createdBy     Admin       @relation(fields: [createdById], references: [id])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  eventPayments EventPayment[]
+  gallery       GalleryImage[]
+
+  @@index([status])
+  @@index([date])
+  @@map("events")
+}
+
+// ─── Membership & Fees ───────────────────────────────────────────────────────
+
+model MembershipPlan {
+  id          String   @id @default(cuid())
+  year        Int      @unique
+  amount      Float
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  annualFees AnnualFee[]
+
+  @@map("membership_plans")
+}
+
+model AnnualFee {
+  id            String         @id @default(cuid())
+  memberId      String
+  member        Member         @relation(fields: [memberId], references: [id])
+  planId        String
+  plan          MembershipPlan @relation(fields: [planId], references: [id])
+  year          Int
+  dueAmount     Float
+  paidAmount    Float          @default(0)
+  pendingAmount Float
+  status        PaymentStatus  @default(PENDING)
+  paidDate      DateTime?
+  paymentMode   PaymentMode?
+  receiptNumber String?
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([memberId, year])
+  @@index([year])
+  @@index([status])
+  @@map("annual_fees")
+}
+
+// ─── Event Payments ──────────────────────────────────────────────────────────
+
+model EventPayment {
+  id             String        @id @default(cuid())
+  eventId        String
+  event          Event         @relation(fields: [eventId], references: [id])
+  memberId       String
+  member         Member        @relation(fields: [memberId], references: [id])
+  amountDue      Float
+  amountPaid     Float         @default(0)
+  pendingAmount  Float
+  transactionRef String?
+  paymentDate    DateTime?
+  paymentMode    PaymentMode?
+  status         PaymentStatus @default(PENDING)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([eventId, memberId])
+  @@index([eventId])
+  @@index([memberId])
+  @@index([status])
+  @@map("event_payments")
+}
+
+// ─── Gallery ─────────────────────────────────────────────────────────────────
+
+model GalleryImage {
+  id        String   @id @default(cuid())
+  imageUrl  String
+  caption   String?
+  eventId   String?
+  event     Event?   @relation(fields: [eventId], references: [id])
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
+  @@map("gallery_images")
+}
+
+// ─── Contact Messages ────────────────────────────────────────────────────────
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([isRead])
+  @@map("contact_messages")
+}
+
+// ─── Audit Logs ──────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  admin     Admin    @relation(fields: [adminId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  details   String?
+  createdAt DateTime @default(now())
+
+  @@index([adminId])
+  @@index([entity])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
