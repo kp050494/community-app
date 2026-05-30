@@ -83,54 +83,58 @@ model Admin {
 // ─── Family ──────────────────────────────────────────────────────────────────
 
 model Family {
-  id         String   @id @default(cuid())
-  familyId   String   @unique
-  familyName String
-  kutchVatan String?
-  address    String?
-  city       String?
-  notes      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id               String   @id @default(cuid())
+  familyId         String              // User-provided unique identifier
+  businessName     String              // Business name
+  familyName       String              // Family name
+  kutchVatan       String?             // Kutch origin
+  currentCity      String?             // Current city
+  businessAddress  String?             // Business address
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   members Member[]
 
+  // Composite unique constraint: familyId must be unique, businessName + familyName combination should be unique
+  @@unique([familyId, businessName, familyName], name: "familyKey")
   @@index([familyId])
   @@index([familyName])
+  @@index([businessName])
   @@index([kutchVatan])
-  @@index([city])
+  @@index([currentCity])
   @@map("families")
 }
 
 // ─── Member ──────────────────────────────────────────────────────────────────
 
 model Member {
-  id            String         @id @default(cuid())
-  memberId      String         @unique
-  familyId      String
-  family        Family         @relation(fields: [familyId], references: [id])
-  fullName      String
-  gender        Gender
-  dob           DateTime?
-  phone         String?
-  email         String?
-  firmName      String?
-  designation   String?
-  education     String?
-  maritalStatus MaritalStatus?
-  bloodGroup    String?
-  joinedDate    DateTime       @default(now())
-  isActive      Boolean        @default(true)
-  notes         String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id                String         @id @default(cuid())
+  memberId          String         @unique
+  familyId          String
+  family            Family         @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  firstName         String
+  surname           String
+  dob               DateTime?
+  gender            Gender
+  bloodGroup        String?
+  address           String?                // Member's individual address
+  phone             String?                // Telephone number
+  email             String?
+  education         String?
+  occupationRole    String?                // Occupation/Business Role
+  maritalStatus     MaritalStatus?
+  isActive          Boolean        @default(true)
+  notes             String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
-  annualFees    AnnualFee[]
-  eventPayments EventPayment[]
+  annualFees        AnnualFee[]
+  eventPayments     EventPayment[]
 
   @@index([familyId])
-  @@index([fullName])
-  @@index([firmName])
+  @@index([firstName])
+  @@index([surname])
   @@index([isActive])
   @@index([phone])
   @@map("members")

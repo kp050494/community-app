@@ -36,10 +36,12 @@ export function FamilyFormDialog({ open, onOpenChange, onSuccess }: FamilyFormDi
   const form = useForm<FamilyFormValues>({
     resolver: zodResolver(familySchema),
     defaultValues: {
+      familyId: "",
+      businessName: "",
       familyName: "",
       kutchVatan: "",
-      address: "",
-      city: "",
+      currentCity: "",
+      businessAddress: "",
       notes: "",
     },
   })
@@ -80,10 +82,38 @@ export function FamilyFormDialog({ open, onOpenChange, onSuccess }: FamilyFormDi
             
             <FormField
               control={form.control}
+              name="familyId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Family ID <span className="text-destructive">*</span></FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. FAM-001" {...field} className="bg-background/50" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="businessName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Business Name <span className="text-destructive">*</span></FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. Patel Textiles" {...field} className="bg-background/50" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="familyName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Family Name (Household Name) <span className="text-destructive">*</span></FormLabel>
+                  <FormLabel>Family Name <span className="text-destructive">*</span></FormLabel>
                   <FormControl>
                     <Input placeholder="e.g. Patel Family" {...field} className="bg-background/50" />
                   </FormControl>
@@ -108,7 +138,7 @@ export function FamilyFormDialog({ open, onOpenChange, onSuccess }: FamilyFormDi
               />
               <FormField
                 control={form.control}
-                name="city"
+                name="currentCity"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Current City</FormLabel>
@@ -123,12 +153,12 @@ export function FamilyFormDialog({ open, onOpenChange, onSuccess }: FamilyFormDi
 
             <FormField
               control={form.control}
-              name="address"
+              name="businessAddress"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Full Address</FormLabel>
+                  <FormLabel>Business Address</FormLabel>
                   <FormControl>
-                    <Input placeholder="House No, Street, Area" {...field} className="bg-background/50" />
+                    <Input placeholder="House No, Street, Area, GIDC" {...field} className="bg-background/50" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -140,7 +170,7 @@ export function FamilyFormDialog({ open, onOpenChange, onSuccess }: FamilyFormDi
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Internal Notes</FormLabel>
+                  <FormLabel>Notes</FormLabel>
                   <FormControl>
                     <Input placeholder="Any specific details" {...field} className="bg-background/50" />
                   </FormControl>

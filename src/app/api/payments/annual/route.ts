@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { annualFeePaymentSchema } from "@/lib/validations/payment"
+import { isEligibleForFeeCollection, calculateAge } from "@/lib/utils"
 import { z } from "zod"
 
 export async function GET(req: NextRequest) {
@@ -9,6 +10,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const year = searchParams.get("year") ? parseInt(searchParams.get("year")!) : undefined
     const status = searchParams.get("status") || ""
+    const onlyEligible = searchParams.get("onlyEligible") === "true"
 
     const where = {
       AND: [
@@ -22,8 +24,11 @@ export async function GET(req: NextRequest) {
       include: {
         member: {
           select: {
+            id: true,
             fullName: true,
             memberId: true,
+            gender: true,
+            dob: true,
             family: {
               select: {
                 city: true
@@ -37,7 +42,25 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    return NextResponse.json({ success: true, data: annualFees })
+    // Filter by eligibility if requested
+    let filteredFees = annualFees
+    if (onlyEligible) {
+      filteredFees = annualFees.filter(fee => 
+        isEligibleForFeeCollection(fee.member.gender, fee.member.dob)
+      )
+    }
+
+    // Map to include age information
+    const mappedFees = filteredFees.map(fee => ({
+      ...fee,
+      member: {
+        ...fee.member,
+        age: fee.member.dob ? calculateAge(fee.member.dob) : null,
+        isEligibleForFeeCollection: isEligibleForFeeCollection(fee.member.gender, fee.member.dob)
+      }
+    }))
+
+    return NextResponse.json({ success: true, data: mappedFees })
   } catch (error) {
     console.error("Error fetching annual fees:", error)
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
@@ -63,6 +86,28 @@ export async function POST(req: NextRequest) {
 
     console.log("=== SAVING ANNUAL FEE PAYMENT API ===");
     console.log("Incoming request body:", JSON.stringify(body, null, 2));
+
+    // Check if member exists and is eligible for fee collection
+    const member = await prisma.member.findUnique({
+      where: { id: body.memberId },
+      select: { gender: true, dob: true }
+    })
+
+    if (!member) {
+      return NextResponse.json({ error: "Member not found" }, { status: 404 })
+    }
+
+    // Validate member eligibility for fee collection
+    if (!isEligibleForFeeCollection(member.gender, member.dob)) {
+      const age = member.dob ? calculateAge(member.dob) : null
+      return NextResponse.json(
+        { 
+          error: `Member is not eligible for fee collection. Fees are only collected from male members aged 18-45 years.`,
+          details: { gender: member.gender, age, eligibilityInfo: "Male members aged 18-45 only" }
+        }, 
+        { status: 400 }
+      )
+    }
 
     // Check if the record already exists for that member and year
     const existingFee = await prisma.annualFee.findUnique({

@@ -20,9 +20,11 @@ export async function GET(req: NextRequest) {
 
     const where = search ? {
       OR: [
+        { familyId: { contains: search, mode: "insensitive" as const } },
         { familyName: { contains: search, mode: "insensitive" as const } },
+        { businessName: { contains: search, mode: "insensitive" as const } },
         { kutchVatan: { contains: search, mode: "insensitive" as const } },
-        { city: { contains: search, mode: "insensitive" as const } }
+        { currentCity: { contains: search, mode: "insensitive" as const } }
       ]
     } : {}
 
@@ -68,17 +70,30 @@ export async function POST(req: NextRequest) {
     }
     const body = validation.data
 
-    // Generate Family ID (SKPF-XXXX)
-    const count = await prisma.family.count()
-    const familyId = `SKPF-${(count + 1).toString().padStart(4, '0')}`
+    // Check if family with this familyId, businessName, and familyName already exists
+    const existingFamily = await prisma.family.findFirst({
+      where: {
+        familyId: body.familyId,
+        businessName: body.businessName,
+        familyName: body.familyName
+      }
+    })
+
+    if (existingFamily) {
+      return NextResponse.json(
+        { error: "Family with this ID, business name, and family name already exists" },
+        { status: 409 }
+      )
+    }
 
     const family = await prisma.family.create({
       data: {
-        familyId,
+        familyId: body.familyId,
+        businessName: body.businessName,
         familyName: body.familyName,
         kutchVatan: body.kutchVatan || null,
-        address: body.address || null,
-        city: body.city || null,
+        currentCity: body.currentCity || null,
+        businessAddress: body.businessAddress || null,
         notes: body.notes || null,
       }
     })
@@ -86,6 +101,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(family, { status: 201 })
   } catch (error) {
     console.error("Error creating family:", error)
+    if (error instanceof Error && error.message.includes("Unique constraint failed")) {
+      return NextResponse.json(
+        { error: "Family with this ID, business name, and family name combination already exists" },
+        { status: 409 }
+      )
+    }
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
 }

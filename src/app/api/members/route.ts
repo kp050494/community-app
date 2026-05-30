@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { memberSchema } from "@/lib/validations/member"
+import { calculateAge } from "@/lib/utils"
 import { z } from "zod"
 
 export async function GET(req: NextRequest) {
@@ -15,23 +16,31 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1")
     const limit = parseInt(searchParams.get("limit") || "10")
     const search = searchParams.get("search") || ""
+    const familyId = searchParams.get("familyId") || ""
 
     const skip = (page - 1) * limit
 
-    const where = search ? {
-      OR: [
-        { fullName: { contains: search, mode: "insensitive" as const } },
-        { memberId: { contains: search, mode: "insensitive" as const } },
-        { phone: { contains: search, mode: "insensitive" as const } }
-      ]
-    } : {}
+    const where = {
+      ...(familyId ? { familyId } : {}),
+      ...(search ? {
+        OR: [
+          { firstName: { contains: search, mode: "insensitive" as const } },
+          { surname: { contains: search, mode: "insensitive" as const } },
+          { memberId: { contains: search, mode: "insensitive" as const } },
+          { phone: { contains: search, mode: "insensitive" as const } }
+        ]
+      } : {})
+    }
 
     const [members, total] = await Promise.all([
       prisma.member.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: "desc" },
+        orderBy: [
+          { gender: "asc" },      // Sort by gender (FEMALE, MALE, OTHER alphabetically)
+          { dob: "desc" }         // Then by age (oldest first, i.e., earliest DOB first)
+        ],
         include: {
           family: true
         }
@@ -40,17 +49,21 @@ export async function GET(req: NextRequest) {
     ])
 
     const mappedMembers = members.map(m => {
-      const parts = m.fullName.split(" ")
-      const firstName = parts[0]
-      const lastName = parts.slice(1).join(" ")
+      const age = m.dob ? calculateAge(m.dob) : null
       return {
         ...m,
-        firstName,
-        lastName,
-        mobileNumber: m.phone,
-        currentCity: m.family?.city || "",
-        kutchVatan: m.family?.kutchVatan || "",
-        address: m.family?.address || "",
+        fullName: `${m.firstName} ${m.surname}`,
+        age,
+        telephoneNumber: m.phone,
+        familyDetails: {
+          id: m.family.id,
+          familyId: m.family.familyId,
+          businessName: m.family.businessName,
+          familyName: m.family.familyName,
+          kutchVatan: m.family.kutchVatan,
+          currentCity: m.family.currentCity,
+          businessAddress: m.family.businessAddress
+        }
       }
     })
 
@@ -88,22 +101,34 @@ export async function POST(req: NextRequest) {
     const member = await prisma.member.create({
       data: {
         memberId,
-        fullName: `${body.firstName} ${body.lastName}`,
+        firstName: body.firstName,
+        surname: body.surname,
         gender: body.gender,
         dob: body.dob ? new Date(body.dob) : null,
-        phone: body.mobileNumber,
+        phone: body.phone || null,
         email: body.email || null,
-        firmName: body.occupation || null,
+        occupationRole: body.occupationRole || null,
         education: body.education || null,
         bloodGroup: body.bloodGroup || null,
+        address: body.address || null,
+        maritalStatus: body.maritalStatus || null,
         isActive: body.isActive ?? true,
         familyId: body.familyId
+      },
+      include: {
+        family: true
       }
     })
 
     return NextResponse.json(member, { status: 201 })
   } catch (error) {
     console.error("Error creating member:", error)
+    if (error instanceof Error && error.message.includes("fk_")) {
+      return NextResponse.json(
+        { error: "Family not found" },
+        { status: 404 }
+      )
+    }
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
 }

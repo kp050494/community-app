@@ -12,8 +12,8 @@ import { cn } from "@/lib/utils"
 
 const NAV_ITEMS = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/admin/dashboard" },
-  { icon: Users, label: "Members", href: "/admin/members" },
   { icon: Home, label: "Families", href: "/admin/families" },
+  { icon: Users, label: "Members", href: "/admin/members" },
   { icon: Calendar, label: "Events", href: "/admin/events" },
   { icon: Bell, label: "Notices", href: "/admin/notices" },
   { icon: CreditCard, label: "Payments", href: "/admin/payments" },

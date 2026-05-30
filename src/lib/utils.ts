@@ -62,6 +62,18 @@ export function isEligibleForFee(dob: Date | string): boolean {
   return calculateAge(dob) >= 18
 }
 
+/**
+ * Determines if a member is eligible for fee collection based on new criteria:
+ * Male members aged between 18 and 45 years (inclusive).
+ */
+export function isEligibleForFeeCollection(gender: string, dob: Date | string | null): boolean {
+  if (!dob || gender !== 'MALE') {
+    return false
+  }
+  const age = calculateAge(dob)
+  return age >= 18 && age <= 45
+}
+
 // ─── ID Generation ───────────────────────────────────────────────────────────
 
 /**

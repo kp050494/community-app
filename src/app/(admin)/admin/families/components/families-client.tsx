@@ -21,10 +21,12 @@ import { formatDate } from "@/lib/utils"
 type Family = {
   id: string
   familyId: string
+  businessName: string
   familyName: string
   kutchVatan: string | null
-  city: string | null
-  address: string | null
+  currentCity: string | null
+  businessAddress: string | null
+  notes: string | null
   createdAt: string
   _count: {
     members: number
@@ -91,7 +93,7 @@ export function FamiliesClient() {
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="font-semibold">Family Name</TableHead>
+              <TableHead className="font-semibold">Family / Business</TableHead>
               <TableHead className="font-semibold">Members</TableHead>
               <TableHead className="font-semibold">Vatan</TableHead>
               <TableHead className="font-semibold">City</TableHead>
@@ -130,8 +132,8 @@ export function FamiliesClient() {
                         <span className="font-semibold text-foreground">
                           {family.familyName}
                         </span>
-                        <span className="text-xs text-muted-foreground font-mono">
-                          {family.familyId}
+                        <span className="text-xs text-muted-foreground">
+                          {family.businessName} • {family.familyId}
                         </span>
                       </div>
                     </div>
@@ -145,7 +147,7 @@ export function FamiliesClient() {
                     {family.kutchVatan || "-"}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {family.city || "-"}
+                    {family.currentCity || "-"}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     {formatDate(family.createdAt)}

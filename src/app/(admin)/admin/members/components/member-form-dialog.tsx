@@ -33,9 +33,11 @@ import {
 
 type FamilyOption = {
   id: string
+  familyId: string
+  businessName: string
   familyName: string
   kutchVatan: string | null
-  city: string | null
+  currentCity: string | null
 }
 
 interface MemberFormDialogProps {
@@ -57,13 +59,13 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess }: MemberFormDi
     resolver: zodResolver(memberSchema),
     defaultValues: {
       firstName: "",
-      lastName: "",
+      surname: "",
       gender: "" as any,
       dob: "",
       bloodGroup: "",
       education: "",
-      occupation: "",
-      mobileNumber: "",
+      occupationRole: "",
+      phone: "",
       email: "",
       familyId: "",
       isFamilyHead: false,
@@ -102,7 +104,9 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess }: MemberFormDi
 
   const filteredFamilies = families.filter(f =>
     f.familyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (f.city && f.city.toLowerCase().includes(searchQuery.toLowerCase()))
+    f.businessName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    f.familyId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (f.currentCity && f.currentCity.toLowerCase().includes(searchQuery.toLowerCase()))
   ).slice(0, 8)
 
   const handleSelectFamily = (family: FamilyOption) => {
@@ -171,10 +175,10 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess }: MemberFormDi
                 />
                 <FormField
                   control={form.control}
-                  name="lastName"
+                  name="surname"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Last Name <span className="text-destructive">*</span></FormLabel>
+                      <FormLabel>Surname <span className="text-destructive">*</span></FormLabel>
                       <FormControl>
                         <Input placeholder="Patel" {...field} className="bg-background/50" />
                       </FormControl>
@@ -293,10 +297,10 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess }: MemberFormDi
                                 >
                                   <div>
                                     <div className="font-medium text-foreground group-hover:text-primary transition-colors">
-                                      {family.familyName}
+                                      {family.businessName} • {family.familyName}
                                     </div>
                                     <div className="text-xs text-muted-foreground font-mono mt-0.5">
-                                      {family.city ? family.city : 'No City'} {family.kutchVatan ? `• ${family.kutchVatan}` : ''}
+                                      {family.familyId} • {family.currentCity ? family.currentCity : 'No City'} {family.kutchVatan ? `• ${family.kutchVatan}` : ''}
                                     </div>
                                   </div>
                                   {form.watch("familyId") === family.id && (
@@ -343,10 +347,10 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess }: MemberFormDi
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="mobileNumber"
+                  name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Mobile Number <span className="text-destructive">*</span></FormLabel>
+                      <FormLabel>Telephone Number <span className="text-destructive">*</span></FormLabel>
                       <FormControl>
                         <Input placeholder="+91 9876543210" {...field} className="bg-background/50" />
                       </FormControl>
@@ -389,12 +393,12 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess }: MemberFormDi
                 />
                 <FormField
                   control={form.control}
-                  name="occupation"
+                  name="occupationRole"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Occupation</FormLabel>
+                      <FormLabel>Occupation / Business Role</FormLabel>
                       <FormControl>
-                        <Input placeholder="Business / Salaried" {...field} className="bg-background/50" />
+                        <Input placeholder="Owner, Manager, Sales" {...field} className="bg-background/50" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

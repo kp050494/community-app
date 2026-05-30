@@ -24,15 +24,19 @@ type Member = {
   id: string
   memberId: string
   firstName: string
-  lastName: string
-  mobileNumber: string
+  surname: string
+  phone?: string
+  telephoneNumber?: string
   kutchVatan: string
   currentCity: string
   isActive: boolean
   createdAt: string
-  family: {
+  familyDetails?: {
+    id: string
     familyId: string
+    businessName: string
     familyName: string
+    currentCity?: string
   } | null
 }
 
@@ -141,20 +145,20 @@ export function MembersClient() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-xs border border-primary/20">
-                        {member.firstName[0]}{member.lastName[0]}
+                        {member.firstName[0]}{member.surname[0]}
                       </div>
                       <span className="font-semibold text-foreground">
-                        {member.firstName} {member.lastName}
+                        {member.firstName} {member.surname}
                       </span>
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
-                    {member.mobileNumber}
+                    {member.telephoneNumber || member.mobileNumber}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col text-sm">
-                      <span className="text-foreground font-medium">{member.family?.familyName || '-'}</span>
-                      <span className="text-muted-foreground text-xs">{member.family?.familyId} • {member.currentCity || '-'}</span>
+                      <span className="text-foreground font-medium">{member.familyDetails?.familyName || '-'}</span>
+                      <span className="text-muted-foreground text-xs">{member.familyDetails?.businessName ? `${member.familyDetails.businessName} • ${member.familyDetails.familyId}` : member.familyDetails?.familyId || '-'} • {member.familyDetails?.currentCity || member.currentCity || '-'}</span>
                     </div>
                   </TableCell>
                   <TableCell>
