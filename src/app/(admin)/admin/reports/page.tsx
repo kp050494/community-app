@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma"
-import { BarChart3, Users, Landmark, Download, FileSpreadsheet, Map, Award, HelpCircle } from "lucide-react"
+import { Users, Landmark, Map } from "lucide-react"
 import { GlassCard } from "@/components/shared/glass-card"
+import { ReportExportButtons } from "./components/report-export-buttons"
 
 export const revalidate = 0
 
@@ -27,9 +28,9 @@ export default async function AdminReportsPage() {
       take: 5,
     }),
     prisma.family.groupBy({
-      by: ["city"],
+      by: ["currentCity"],
       _count: true,
-      orderBy: { _count: { city: "desc" } },
+      orderBy: { _count: { currentCity: "desc" } },
       take: 5,
     }),
   ])
@@ -44,16 +45,14 @@ export default async function AdminReportsPage() {
           </p>
         </div>
         
-        <div className="flex gap-2">
-          <button className="px-4 py-2 text-xs font-bold text-primary hover:text-primary-foreground bg-primary/10 hover:bg-primary border border-primary/20 rounded-xl transition-all flex items-center gap-2 shadow-sm">
-            <Download className="w-4 h-4" />
-            Export PDF Census
-          </button>
-          <button className="px-4 py-2 text-xs font-bold text-emerald-500 hover:text-emerald-500-foreground bg-emerald-500/10 hover:bg-emerald-500 border border-emerald-500/20 rounded-xl transition-all flex items-center gap-2 shadow-sm">
-            <FileSpreadsheet className="w-4 h-4" />
-            Export Excel Sheet
-          </button>
-        </div>
+        <ReportExportButtons
+          totalMembers={totalMembers}
+          totalFamilies={totalFamilies}
+          males={males}
+          females={females}
+          membersByVatan={membersByVatan.map(v => ({ kutchVatan: v.kutchVatan, _count: v._count._all ?? (v._count as any) }))}
+          membersByCity={membersByCity.map(c => ({ currentCity: c.currentCity, _count: c._count._all ?? (c._count as any) }))}
+        />
       </div>
 
       {/* Demographics Breakdown Cards */}
@@ -148,7 +147,7 @@ export default async function AdminReportsPage() {
                     <span className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-xs text-secondary-foreground font-bold">
                       {i + 1}
                     </span>
-                    <span className="text-sm font-semibold text-foreground">{city.city || "Unknown"}</span>
+                    <span className="text-sm font-semibold text-foreground">{city.currentCity || "Unknown"}</span>
                   </div>
                   <span className="text-xs font-bold text-muted-foreground bg-muted border border-white/5 px-2.5 py-0.5 rounded-full">
                     {city._count} Households

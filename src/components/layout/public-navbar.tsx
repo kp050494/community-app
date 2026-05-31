@@ -43,16 +43,15 @@ export function PublicNavbar() {
           <div className="flex items-center justify-between">
             
             {/* Logo */}
-            <Link href="/" className="flex flex-col relative z-50 group">
-              <span className="font-heading text-2xl font-bold tracking-tight text-foreground transition-transform duration-300 group-hover:scale-[1.02]">
-                <span className="gold-gradient">SKP</span>PMM
-              </span>
-              <span className={cn(
-                "text-[0.6rem] font-medium text-muted-foreground italic transition-opacity duration-300",
-                isScrolled ? "opacity-0 h-0" : "opacity-100"
-              )}>
-                શ્રી કચ્છ કડવા પાટીદાર પાંદેસરા મિત્ર મંડળ
-              </span>
+            <Link href="/" className="flex items-center gap-2 relative z-50 group">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo.png"
+                alt="SKPPMM Logo"
+                width={56}
+                height={56}
+                className="object-contain transition-transform duration-300 group-hover:scale-[1.05] shrink-0"
+              />
             </Link>
 
             {/* Desktop Navigation */}
@@ -84,12 +83,6 @@ export function PublicNavbar() {
                 )
               })}
               
-              <Link 
-                href="/login" 
-                className="ml-4 px-5 py-2 text-sm font-medium rounded-full bg-primary/10 text-primary border border-primary/20 transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_15px_rgba(212,168,83,0.3)]"
-              >
-                Login
-              </Link>
             </nav>
 
             {/* Mobile Menu Toggle */}
@@ -131,14 +124,6 @@ export function PublicNavbar() {
                   {link.name}
                 </Link>
               ))}
-              <div className="w-12 h-px bg-border mx-auto my-2" />
-              <Link
-                href="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-xl font-medium text-primary"
-              >
-                Admin Login
-              </Link>
             </nav>
           </motion.div>
         )}

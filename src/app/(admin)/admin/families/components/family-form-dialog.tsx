@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
@@ -28,36 +28,50 @@ interface FamilyFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
+  initialData?: FamilyFormValues & { id: string }
 }
 
-export function FamilyFormDialog({ open, onOpenChange, onSuccess }: FamilyFormDialogProps) {
+const defaultValues: FamilyFormValues = {
+  familyId: "",
+  businessName: "",
+  familyName: "",
+  kutchVatan: "",
+  currentCity: "",
+  businessAddress: "",
+  notes: "",
+}
+
+export function FamilyFormDialog({ open, onOpenChange, onSuccess, initialData }: FamilyFormDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const form = useForm<FamilyFormValues>({
     resolver: zodResolver(familySchema),
-    defaultValues: {
-      familyId: "",
-      businessName: "",
-      familyName: "",
-      kutchVatan: "",
-      currentCity: "",
-      businessAddress: "",
-      notes: "",
-    },
+    defaultValues,
   })
+
+  useEffect(() => {
+    if (open) {
+      form.reset(initialData ?? defaultValues)
+    }
+  }, [open, initialData, form])
+
+  const isEdit = Boolean(initialData)
 
   const onSubmit = async (data: FamilyFormValues) => {
     try {
       setIsSubmitting(true)
-      const res = await fetch("/api/families", {
-        method: "POST",
+      const res = await fetch(initialData ? `/api/families/${initialData.id}` : "/api/families", {
+        method: initialData ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
 
-      if (!res.ok) throw new Error("Failed to create family")
-      
-      form.reset()
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null)
+        throw new Error(errorBody?.error || "Failed to save family")
+      }
+
+      form.reset(defaultValues)
       onSuccess()
       onOpenChange(false)
     } catch (error) {
@@ -71,15 +85,18 @@ export function FamilyFormDialog({ open, onOpenChange, onSuccess }: FamilyFormDi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] bg-card border-border/50">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-heading text-foreground">Add New Family</DialogTitle>
+          <DialogTitle className="text-2xl font-heading text-foreground">
+            {isEdit ? "Edit Family" : "Add New Family"}
+          </DialogTitle>
           <DialogDescription>
-            Create a new household to group members together.
+            {isEdit
+              ? "Update the family registration details below."
+              : "Create a new household to group members together."}
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-4">
-            
             <FormField
               control={form.control}
               name="familyId"
@@ -184,7 +201,7 @@ export function FamilyFormDialog({ open, onOpenChange, onSuccess }: FamilyFormDi
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting} className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[120px]">
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Family"}
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : isEdit ? "Update Family" : "Save Family"}
               </Button>
             </div>
           </form>

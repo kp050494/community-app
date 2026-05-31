@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isEligibleForFeeCollection, calculateAge } from "@/lib/utils"
+import { isEligibleForFeeCollection, calculateAge, formatMemberFullName } from "@/lib/utils"
 
 /**
  * GET /api/members/eligible-for-fees
@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
       OR: [
         { firstName: { contains: search, mode: "insensitive" as const } },
         { surname: { contains: search, mode: "insensitive" as const } },
+        { fullName: { contains: search, mode: "insensitive" as const } },
         { memberId: { contains: search, mode: "insensitive" as const } },
         { phone: { contains: search, mode: "insensitive" as const } }
       ]
@@ -50,10 +51,15 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    // Filter only eligible members
-    const eligibleMembers = allMembers.filter(m =>
-      isEligibleForFeeCollection(m.gender, m.dob)
-    )
+    // Filter only eligible members and sort youngest first (18 → 45)
+    const eligibleMembers = allMembers
+      .filter(m => isEligibleForFeeCollection(m.gender, m.dob))
+      .sort((a, b) => {
+        if (!a.dob && !b.dob) return 0
+        if (!a.dob) return 1
+        if (!b.dob) return -1
+        return b.dob.getTime() - a.dob.getTime() // higher DOB timestamp = younger
+      })
 
     // Paginate the eligible members
     const paginatedMembers = eligibleMembers.slice(skip, skip + limit)
@@ -65,9 +71,9 @@ export async function GET(req: NextRequest) {
       return {
         id: m.id,
         memberId: m.memberId,
-        firstName: m.firstName,
-        surname: m.surname,
-        fullName: `${m.firstName} ${m.surname}`,
+        firstName: m.firstName ?? "",
+        surname: m.surname ?? "",
+        fullName: formatMemberFullName(m.firstName, m.surname, m.fullName),
         gender: m.gender,
         age,
         dob: m.dob,

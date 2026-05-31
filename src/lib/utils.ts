@@ -91,3 +91,19 @@ export function generateMemberId(sequence: number): string {
 export function generateReceiptNumber(year: number, sequence: number): string {
   return `RCP-${year}-${String(sequence).padStart(4, '0')}`
 }
+
+/**
+ * Formats a member's full name with fallback to legacy fullName.
+ */
+export function formatMemberFullName(
+  firstName?: string | null,
+  surname?: string | null,
+  legacyFullName?: string | null
+): string {
+  const cleanFirst = firstName?.trim() ?? ""
+  const cleanSurname = surname?.trim() ?? ""
+  if (cleanFirst || cleanSurname) {
+    return [cleanFirst, cleanSurname].filter(Boolean).join(" ")
+  }
+  return legacyFullName?.trim() || "Unknown Member"
+}

@@ -13,30 +13,38 @@ import {
   TableHeader, TableRow,
 } from "@/components/ui/table"
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, 
+  DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { formatDate } from "@/lib/utils"
+import { MemberDetailsDialog } from "./member-details-dialog"
 import { MemberFormDialog } from "./member-form-dialog"
 
 type Member = {
   id: string
   memberId: string
-  firstName: string
-  surname: string
-  phone?: string
-  telephoneNumber?: string
-  kutchVatan: string
-  currentCity: string
+  firstName?: string | null
+  surname?: string | null
+  fullName?: string | null
+  phone?: string | null
   isActive: boolean
   createdAt: string
+  gender?: string | null
+  dob?: string | null
+  bloodGroup?: string | null
+  address?: string | null
+  email?: string | null
+  education?: string | null
+  occupationRole?: string | null
   familyDetails?: {
     id: string
     familyId: string
-    businessName: string
+    businessName: string | null
     familyName: string
-    currentCity?: string
+    currentCity?: string | null
+    kutchVatan?: string | null
+    businessAddress?: string | null
   } | null
 }
 
@@ -44,7 +52,10 @@ export function MembersClient() {
   const [members, setMembers] = useState<Member[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [memberDialogOpen, setMemberDialogOpen] = useState(false)
+  const [memberDialogData, setMemberDialogData] = useState<Member | null>(null)
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [detailsMember, setDetailsMember] = useState<Member | null>(null)
 
   useEffect(() => {
     fetchMembers()
@@ -63,12 +74,96 @@ export function MembersClient() {
     }
   }
 
+  const handleCreateMember = () => {
+    setMemberDialogData(null)
+    setMemberDialogOpen(true)
+  }
+
+  const handleEditMember = (member: Member) => {
+    setMemberDialogData(member)
+    setMemberDialogOpen(true)
+  }
+
+  const handleViewMember = (member: Member) => {
+    setDetailsMember(member)
+    setDetailsOpen(true)
+  }
+
+  const handleExportCSV = () => {
+    const headers = [
+      "Member ID", "First Name", "Surname", "Gender", "Date of Birth", "Age",
+      "Blood Group", "Phone", "Email", "Address", "Education", "Occupation / Role",
+      "Family ID", "Family Name", "Business Name", "Kutch Vatan", "Current City", "Status", "Joined Date"
+    ]
+    const toCSV = (val: any) => `"${String(val ?? "").replace(/"/g, '""')}"`
+    const rows = members.map(m => {
+      const age = m.dob ? Math.floor((Date.now() - new Date(m.dob).getTime()) / (365.25 * 24 * 3600 * 1000)) : ""
+      return [
+        m.memberId,
+        m.firstName || "",
+        m.surname || "",
+        m.gender || "",
+        m.dob ? new Date(m.dob).toLocaleDateString("en-IN") : "",
+        age,
+        m.bloodGroup || "",
+        m.phone || "",
+        m.email || "",
+        m.address || "",
+        m.education || "",
+        m.occupationRole || "",
+        m.familyDetails?.familyId || "",
+        m.familyDetails?.familyName || "",
+        m.familyDetails?.businessName || "",
+        m.familyDetails?.kutchVatan || "",
+        m.familyDetails?.currentCity || "",
+        m.isActive ? "Active" : "Inactive",
+        new Date(m.createdAt).toLocaleDateString("en-IN"),
+      ].map(toCSV).join(",")
+    })
+    const csv = [headers.map(toCSV).join(","), ...rows].join("\n")
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `members-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleDeleteMember = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this member? This cannot be undone.")) return
+    const res = await fetch(`/api/members/${id}`, { method: "DELETE" })
+    if (!res.ok) {
+      alert("Failed to delete member")
+      return
+    }
+    fetchMembers()
+  }
+
   return (
     <div className="space-y-6">
       <MemberFormDialog 
-        open={isDialogOpen} 
-        onOpenChange={setIsDialogOpen} 
+        open={memberDialogOpen} 
+        onOpenChange={setMemberDialogOpen} 
         onSuccess={fetchMembers} 
+        initialData={memberDialogData ?? undefined}
+      />
+      <MemberDetailsDialog
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        member={detailsMember ?? undefined}
+        onEdit={() => {
+          if (detailsMember) {
+            setDetailsOpen(false)
+            handleEditMember(detailsMember)
+          }
+        }}
+        onDelete={() => {
+          if (detailsMember) {
+            setDetailsOpen(false)
+            handleDeleteMember(detailsMember.id)
+          }
+        }}
       />
 
       {/* Action Bar */}
@@ -88,12 +183,12 @@ export function MembersClient() {
           </Button>
         </div>
         <div className="flex items-center space-x-2 w-full sm:w-auto">
-          <Button variant="outline" className="w-full sm:w-auto bg-background/50">
+          <Button variant="outline" className="w-full sm:w-auto bg-background/50" onClick={handleExportCSV}>
             <Download className="mr-2 h-4 w-4" />
             Export CSV
           </Button>
           <Button 
-            onClick={() => setIsDialogOpen(true)}
+            onClick={handleCreateMember}
             className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20"
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -144,16 +239,21 @@ export function MembersClient() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-xs border border-primary/20">
-                        {member.firstName[0]}{member.surname[0]}
-                      </div>
+                      {(() => {
+                        const displayName = member.fullName || [member.firstName, member.surname].filter(Boolean).join(" ") || "Unknown"
+                        return (
+                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-xs border border-primary/20">
+                            {displayName.charAt(0).toUpperCase() || "?"}
+                          </div>
+                        )
+                      })()}
                       <span className="font-semibold text-foreground">
-                        {member.firstName} {member.surname}
+                        {member.fullName || [member.firstName, member.surname].filter(Boolean).join(" ") || "Unknown Member"}
                       </span>
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
-                    {member.telephoneNumber || member.mobileNumber}
+                    {member.phone || "-"}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col text-sm">
@@ -177,20 +277,22 @@ export function MembersClient() {
                         <MoreHorizontal className="h-4 w-4" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-[160px] bg-card border-border shadow-xl">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem className="cursor-pointer">
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer text-primary">
-                          <FileEdit className="mr-2 h-4 w-4" />
-                          Edit Profile
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
+                        <DropdownMenuGroup>
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem className="cursor-pointer" onClick={() => handleViewMember(member)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="cursor-pointer text-primary" onClick={() => handleEditMember(member)}>
+                            <FileEdit className="mr-2 h-4 w-4" />
+                            Edit Profile
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive" onClick={() => handleDeleteMember(member.id)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuGroup>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

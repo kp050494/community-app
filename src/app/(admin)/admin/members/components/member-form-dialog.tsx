@@ -22,6 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -44,9 +45,25 @@ interface MemberFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
+  initialData?: MemberFormValues & { id: string }
 }
 
-export function MemberFormDialog({ open, onOpenChange, onSuccess }: MemberFormDialogProps) {
+const defaultValues: MemberFormValues = {
+  familyId: "",
+  firstName: "",
+  surname: "",
+  dob: "",
+  gender: "" as any,
+  bloodGroup: "",
+  address: "",
+  phone: "",
+  email: "",
+  education: "",
+  occupationRole: "",
+  isActive: true,
+}
+
+export function MemberFormDialog({ open, onOpenChange, onSuccess, initialData }: MemberFormDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [families, setFamilies] = useState<FamilyOption[]>([])
   const [isLoadingFamilies, setIsLoadingFamilies] = useState(false)
@@ -57,27 +74,20 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess }: MemberFormDi
 
   const form = useForm<MemberFormValues>({
     resolver: zodResolver(memberSchema),
-    defaultValues: {
-      firstName: "",
-      surname: "",
-      gender: "" as any,
-      dob: "",
-      bloodGroup: "",
-      education: "",
-      occupationRole: "",
-      phone: "",
-      email: "",
-      familyId: "",
-      isFamilyHead: false,
-      isActive: true,
-    },
+    defaultValues,
   })
 
   useEffect(() => {
     if (open) {
       loadFamilies()
+      form.reset(initialData ?? defaultValues)
+      if (initialData) {
+        setSearchQuery(initialData.familyId)
+      } else {
+        setSearchQuery("")
+      }
     }
-  }, [open])
+  }, [open, initialData, form])
 
   const loadFamilies = async () => {
     try {
@@ -104,14 +114,14 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess }: MemberFormDi
 
   const filteredFamilies = families.filter(f =>
     f.familyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    f.businessName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (f.businessName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
     f.familyId.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (f.currentCity && f.currentCity.toLowerCase().includes(searchQuery.toLowerCase()))
   ).slice(0, 8)
 
   const handleSelectFamily = (family: FamilyOption) => {
     form.setValue("familyId", family.id)
-    setSearchQuery(`${family.familyName} (${family.city || 'No City'})`)
+    setSearchQuery(`${family.businessName} • ${family.familyName} (${family.familyId})`)
     setIsSearchOpen(false)
   }
 
@@ -121,23 +131,27 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess }: MemberFormDi
     setIsSearchOpen(true)
   }
 
+  const isEdit = Boolean(initialData)
+
   const onSubmit = async (data: MemberFormValues) => {
     try {
       setIsSubmitting(true)
-      const res = await fetch("/api/members", {
-        method: "POST",
+      const res = await fetch(initialData ? `/api/members/${initialData.id}` : "/api/members", {
+        method: initialData ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
 
-      if (!res.ok) throw new Error("Failed to create member")
-      
-      form.reset()
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null)
+        throw new Error(errorBody?.error || "Failed to save member")
+      }
+
+      form.reset(defaultValues)
       onSuccess()
       onOpenChange(false)
     } catch (error) {
       console.error(error)
-      // TODO: Add toast notification for error
     } finally {
       setIsSubmitting(false)
     }
@@ -147,16 +161,18 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess }: MemberFormDi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px] bg-card border-border/50 max-h-[90vh] overflow-y-auto premium-scrollbar">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-heading text-foreground">Add New Member</DialogTitle>
+          <DialogTitle className="text-2xl font-heading text-foreground">
+            {isEdit ? "Edit Member" : "Add New Member"}
+          </DialogTitle>
           <DialogDescription>
-            Enter the details for the new community member.
+            {isEdit
+              ? "Update the member profile and family assignment."
+              : "Enter the details for the new community member."}
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-4">
-            
-            {/* Personal Details Section */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-primary">Personal Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -246,7 +262,6 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess }: MemberFormDi
               </div>
             </div>
 
-            {/* Family Selection Section */}
             <div className="space-y-4 pt-4 border-t border-border">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-primary">Family Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -279,7 +294,6 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess }: MemberFormDi
                           </button>
                         )}
                       </div>
-                      
                       {isSearchOpen && (
                         <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-md shadow-lg overflow-hidden premium-card">
                           <div className="max-h-[200px] overflow-y-auto p-1 premium-scrollbar">
@@ -316,32 +330,9 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess }: MemberFormDi
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="isFamilyHead"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm bg-background/50">
-                      <FormControl>
-                        <input
-                          type="checkbox"
-                          checked={field.value}
-                          onChange={field.onChange}
-                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary mt-1"
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Family Head</FormLabel>
-                        <DialogDescription>
-                          Is this member the head of the family?
-                        </DialogDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
               </div>
             </div>
 
-            {/* Contact Details Section */}
             <div className="space-y-4 pt-4 border-t border-border">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-primary">Contact Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -350,7 +341,7 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess }: MemberFormDi
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Telephone Number <span className="text-destructive">*</span></FormLabel>
+                      <FormLabel>Telephone Number</FormLabel>
                       <FormControl>
                         <Input placeholder="+91 9876543210" {...field} className="bg-background/50" />
                       </FormControl>
@@ -372,9 +363,21 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess }: MemberFormDi
                   )}
                 />
               </div>
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Address</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="House / Flat No., Street, Area, City" rows={2} {...field} className="bg-background/50 resize-none" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
-            {/* Professional Details Section */}
             <div className="space-y-4 pt-4 border-t border-border">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-primary">Professional Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -412,7 +415,7 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess }: MemberFormDi
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting} className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[120px]">
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Member"}
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : isEdit ? "Update Member" : "Save Member"}
               </Button>
             </div>
           </form>

@@ -44,10 +44,11 @@ async function main() {
   const familyPatel = await prisma.family.create({
     data: {
       familyId: "SKPF-0001",
+      businessName: "Patel Textiles",
       familyName: "Patel Family",
       kutchVatan: "Nakhatrana",
-      address: "B-402, Shrinathji Residencies, VIP Road",
-      city: "Surat",
+      currentCity: "Surat",
+      businessAddress: "B-402, Shrinathji Residencies, VIP Road, Surat",
       notes: "Active members of the community",
     }
   })
@@ -55,20 +56,22 @@ async function main() {
   const familyKothari = await prisma.family.create({
     data: {
       familyId: "SKPF-0002",
+      businessName: "Kothari Diamonds",
       familyName: "Kothari Family",
       kutchVatan: "Madhapar",
-      address: "Flat 101, Gokuldham Towers, Pandesara GIDC",
-      city: "Surat",
+      currentCity: "Surat",
+      businessAddress: "Flat 101, Gokuldham Towers, Pandesara GIDC, Surat",
     }
   })
 
   const familySavla = await prisma.family.create({
     data: {
       familyId: "SKPF-0003",
+      businessName: "Savla Logistics",
       familyName: "Savla Family",
       kutchVatan: "Bhuj",
-      address: "Rowhouse A-12, Kutch Nagar, Udhna",
-      city: "Surat",
+      currentCity: "Surat",
+      businessAddress: "Rowhouse A-12, Kutch Nagar, Udhna, Surat",
     }
   })
 
@@ -79,15 +82,15 @@ async function main() {
     data: {
       memberId: "SKPM-0001",
       familyId: familyPatel.id,
+      firstName: "Ramesh",
+      surname: "Patel",
       fullName: "Ramesh Patel",
       gender: "MALE",
       dob: new Date("1975-04-12"),
       phone: "9876543210",
       email: "ramesh.patel@gmail.com",
-      firmName: "Patel Textiles GIDC",
-      designation: "Managing Director",
+      occupationRole: "Managing Director",
       education: "B.Com",
-      maritalStatus: "MARRIED",
       bloodGroup: "O+",
       isActive: true,
     }
@@ -97,13 +100,13 @@ async function main() {
     data: {
       memberId: "SKPM-0002",
       familyId: familyPatel.id,
+      firstName: "Sharda",
+      surname: "Patel",
       fullName: "Sharda Patel",
       gender: "FEMALE",
       dob: new Date("1978-08-22"),
       phone: "9825012345",
       email: "sharda.patel@gmail.com",
-      firmName: "Homemaker",
-      maritalStatus: "MARRIED",
       bloodGroup: "A+",
       isActive: true,
     }
@@ -113,15 +116,15 @@ async function main() {
     data: {
       memberId: "SKPM-0003",
       familyId: familyKothari.id,
+      firstName: "Hasmukh",
+      surname: "Kothari",
       fullName: "Hasmukh Kothari",
       gender: "MALE",
       dob: new Date("1968-01-30"),
       phone: "9428198765",
       email: "hasmukh@kothari.org",
-      firmName: "Kothari Diamonds",
-      designation: "Partner",
+      occupationRole: "Partner",
       education: "HSC",
-      maritalStatus: "MARRIED",
       bloodGroup: "B+",
       isActive: true,
     }
@@ -131,15 +134,15 @@ async function main() {
     data: {
       memberId: "SKPM-0004",
       familyId: familySavla.id,
+      firstName: "Ketan",
+      surname: "Savla",
       fullName: "Ketan Savla",
       gender: "MALE",
       dob: new Date("1995-11-05"),
       phone: "9909988776",
       email: "ketan.savla@savla.com",
-      firmName: "Savla Logistical Solutions",
-      designation: "Operations Head",
+      occupationRole: "Operations Head",
       education: "B.Tech IT",
-      maritalStatus: "SINGLE",
       bloodGroup: "AB+",
       isActive: true,
     }

@@ -12,9 +12,10 @@ import {
   TableHeader, TableRow,
 } from "@/components/ui/table"
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, 
+  DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { FamilyDetailsDialog } from "./family-details-dialog"
 import { FamilyFormDialog } from "./family-form-dialog"
 import { formatDate } from "@/lib/utils"
 
@@ -37,7 +38,10 @@ export function FamiliesClient() {
   const [families, setFamilies] = useState<Family[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [familyDialogOpen, setFamilyDialogOpen] = useState(false)
+  const [familyDialogData, setFamilyDialogData] = useState<Family | null>(null)
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [detailsFamily, setDetailsFamily] = useState<Family | null>(null)
 
   useEffect(() => {
     fetchFamilies()
@@ -56,12 +60,58 @@ export function FamiliesClient() {
     }
   }
 
+  const handleCreateFamily = () => {
+    setFamilyDialogData(null)
+    setFamilyDialogOpen(true)
+  }
+
+  const handleEditFamily = (family: Family) => {
+    setFamilyDialogData(family)
+    setFamilyDialogOpen(true)
+  }
+
+  const handleViewFamily = (family: Family) => {
+    setDetailsFamily(family)
+    setDetailsOpen(true)
+  }
+
+  const handleDeleteFamily = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this family? This cannot be undone.")) return
+    const res = await fetch(`/api/families/${id}`, { method: "DELETE" })
+    if (!res.ok) {
+      alert("Failed to delete family")
+      return
+    }
+    fetchFamilies()
+  }
+
   return (
     <div className="space-y-6">
       <FamilyFormDialog 
-        open={isDialogOpen} 
-        onOpenChange={setIsDialogOpen} 
+        open={familyDialogOpen} 
+        onOpenChange={setFamilyDialogOpen} 
         onSuccess={fetchFamilies} 
+        initialData={familyDialogData ?? undefined}
+      />
+      <FamilyDetailsDialog
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        family={detailsFamily ? {
+          ...detailsFamily,
+          membersCount: detailsFamily._count.members,
+        } : undefined}
+        onEdit={() => {
+          if (detailsFamily) {
+            setDetailsOpen(false)
+            handleEditFamily(detailsFamily)
+          }
+        }}
+        onDelete={() => {
+          if (detailsFamily) {
+            setDetailsOpen(false)
+            handleDeleteFamily(detailsFamily.id)
+          }
+        }}
       />
 
       {/* Action Bar */}
@@ -79,7 +129,7 @@ export function FamiliesClient() {
         </div>
         <div className="flex items-center space-x-2 w-full sm:w-auto">
           <Button 
-            onClick={() => setIsDialogOpen(true)}
+            onClick={handleCreateFamily}
             className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20"
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -159,20 +209,22 @@ export function FamiliesClient() {
                         <MoreHorizontal className="h-4 w-4" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-[160px] bg-card border-border shadow-xl">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem className="cursor-pointer">
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Family
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer text-primary">
-                          <FileEdit className="mr-2 h-4 w-4" />
-                          Edit Details
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
+                        <DropdownMenuGroup>
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem className="cursor-pointer" onClick={() => handleViewFamily(family)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Family
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="cursor-pointer text-primary" onClick={() => handleEditFamily(family)}>
+                            <FileEdit className="mr-2 h-4 w-4" />
+                            Edit Details
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive" onClick={() => handleDeleteFamily(family.id)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuGroup>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

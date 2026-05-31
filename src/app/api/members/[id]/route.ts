@@ -1,0 +1,103 @@
+import { NextRequest, NextResponse } from "next/server"
+import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+import { memberSchema } from "@/lib/validations/member"
+import { calculateAge, formatMemberFullName } from "@/lib/utils"
+
+export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  try {
+    const params = await context.params
+    const session = await auth()
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const member = await prisma.member.findUnique({
+      where: { id: params.id },
+      include: { family: true },
+    })
+
+    if (!member) {
+      return NextResponse.json({ error: "Member not found" }, { status: 404 })
+    }
+
+    const fullName = formatMemberFullName(member.firstName, member.surname, member.fullName)
+
+    return NextResponse.json({
+      data: {
+        ...member,
+        firstName: member.firstName ?? "",
+        surname: member.surname ?? "",
+        fullName,
+        age: member.dob ? calculateAge(member.dob) : null,
+      },
+    })
+  } catch (error) {
+    console.error("Error fetching member:", error)
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+  }
+}
+
+export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  try {
+    const params = await context.params
+    const session = await auth()
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const json = await req.json()
+    const validation = memberSchema.safeParse(json)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error.format() }, { status: 400 })
+    }
+
+    const body = validation.data
+
+    const family = await prisma.family.findUnique({ where: { id: body.familyId } })
+    if (!family) {
+      return NextResponse.json({ error: "Family not found" }, { status: 404 })
+    }
+
+    const member = await prisma.member.update({
+      where: { id: params.id },
+      data: {
+        firstName: body.firstName,
+        surname: body.surname,
+        fullName: `${body.firstName} ${body.surname}`,
+        gender: body.gender,
+        dob: body.dob ? new Date(body.dob) : null,
+        phone: body.phone || null,
+        email: body.email || null,
+        occupationRole: body.occupationRole || null,
+        education: body.education || null,
+        bloodGroup: body.bloodGroup || null,
+        address: body.address || null,
+        isActive: body.isActive ?? true,
+        familyId: body.familyId,
+      },
+      include: { family: true },
+    })
+
+    return NextResponse.json({ data: member })
+  } catch (error) {
+    console.error("Error updating member:", error)
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+  }
+}
+
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  try {
+    const params = await context.params
+    const session = await auth()
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    await prisma.member.delete({ where: { id: params.id } })
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error deleting member:", error)
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+  }
+}

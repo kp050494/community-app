@@ -1,36 +1,17 @@
-"use client"
+import { auth } from "@/lib/auth"
+import { redirect } from "next/navigation"
+import { AdminLayoutClient } from "./components/admin-layout-client"
 
-import { useState } from "react"
-import { AdminSidebar } from "@/components/layout/admin-sidebar"
-import { AdminTopbar } from "@/components/layout/admin-topbar"
-import { cn } from "@/lib/utils"
-
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const session = await auth()
 
-  return (
-    <div className="flex min-h-screen bg-background">
-      <AdminSidebar collapsed={sidebarCollapsed} />
-      
-      <div 
-        className={cn(
-          "flex-1 flex flex-col transition-all duration-300",
-          sidebarCollapsed ? "md:pl-20" : "md:pl-[280px]"
-        )}
-      >
-        <AdminTopbar 
-          sidebarCollapsed={sidebarCollapsed} 
-          onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)} 
-        />
-        
-        <main className="flex-1 p-6 md:p-8 overflow-x-hidden">
-          {children}
-        </main>
-      </div>
-    </div>
-  )
+  if (!session?.user) {
+    redirect("/login")
+  }
+
+  return <AdminLayoutClient>{children}</AdminLayoutClient>
 }

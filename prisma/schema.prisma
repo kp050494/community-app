@@ -23,12 +23,6 @@ enum Gender {
   OTHER
 }
 
-enum MaritalStatus {
-  SINGLE
-  MARRIED
-  WIDOWED
-  DIVORCED
-}
 
 enum Priority {
   LOW
@@ -85,7 +79,7 @@ model Admin {
 model Family {
   id               String   @id @default(cuid())
   familyId         String              // User-provided unique identifier
-  businessName     String              // Business name
+  businessName     String?             // Business name
   familyName       String              // Family name
   kutchVatan       String?             // Kutch origin
   currentCity      String?             // Current city
@@ -113,9 +107,11 @@ model Member {
   memberId          String         @unique
   familyId          String
   family            Family         @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  firstName         String
-  surname           String
+  firstName         String?
+  surname           String?
+  fullName          String?         @map("fullName")
   dob               DateTime?
+  joinedDate        DateTime?       @map("joinedDate")
   gender            Gender
   bloodGroup        String?
   address           String?                // Member's individual address
@@ -123,9 +119,7 @@ model Member {
   email             String?
   education         String?
   occupationRole    String?                // Occupation/Business Role
-  maritalStatus     MaritalStatus?
   isActive          Boolean        @default(true)
-  notes             String?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
@@ -208,7 +202,7 @@ model MembershipPlan {
 model AnnualFee {
   id            String         @id @default(cuid())
   memberId      String
-  member        Member         @relation(fields: [memberId], references: [id])
+  member        Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
   planId        String
   plan          MembershipPlan @relation(fields: [planId], references: [id])
   year          Int
@@ -236,7 +230,7 @@ model EventPayment {
   eventId        String
   event          Event         @relation(fields: [eventId], references: [id])
   memberId       String
-  member         Member        @relation(fields: [memberId], references: [id])
+  member         Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
   amountDue      Float
   amountPaid     Float         @default(0)
   pendingAmount  Float

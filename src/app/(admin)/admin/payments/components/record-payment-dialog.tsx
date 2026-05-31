@@ -38,6 +38,8 @@ type MemberOption = {
   id: string
   fullName: string
   memberId: string
+  age: number | null
+  phone: string | null
 }
 
 type PlanOption = {
@@ -55,6 +57,7 @@ interface RecordPaymentDialogProps {
 
 export function RecordPaymentDialog({ open, onOpenChange, onSuccess, preselectedMemberId }: RecordPaymentDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [members, setMembers] = useState<MemberOption[]>([])
   const [activePlan, setActivePlan] = useState<PlanOption | null>(null)
   const [isLoadingMeta, setIsLoadingMeta] = useState(true)
@@ -139,8 +142,8 @@ export function RecordPaymentDialog({ open, onOpenChange, onSuccess, preselected
         form.setValue("paidAmount", dbPlan.amount) // default paid to full
       }
 
-      // 2. Fetch members list
-      const membersRes = await fetch("/api/members")
+      // 2. Fetch only eligible members (male, 18-45)
+      const membersRes = await fetch("/api/members/eligible-for-fees")
       const membersData = await membersRes.json()
       const fetchedMembers = membersData.data || []
       setMembers(fetchedMembers)
@@ -207,7 +210,8 @@ export function RecordPaymentDialog({ open, onOpenChange, onSuccess, preselected
   const onSubmit = async (data: PaymentFormValues) => {
     try {
       setIsSubmitting(true)
-      
+      setSubmitError(null)
+
       const payload = {
         ...data,
         dueAmount: Number(data.dueAmount),
@@ -224,14 +228,19 @@ export function RecordPaymentDialog({ open, onOpenChange, onSuccess, preselected
         body: JSON.stringify(payload),
       })
 
-      if (!res.ok) throw new Error("Failed to record payment")
-      
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null)
+        setSubmitError(errorBody?.error || "Failed to record payment. Please try again.")
+        return
+      }
+
       form.reset()
       setSearchQuery("")
+      setSubmitError(null)
       onSuccess()
       onOpenChange(false)
     } catch (error) {
-      console.error(error)
+      setSubmitError("An unexpected error occurred. Please try again.")
     } finally {
       setIsSubmitting(false)
     }
@@ -306,7 +315,9 @@ export function RecordPaymentDialog({ open, onOpenChange, onSuccess, preselected
                         >
                           <div>
                             <span className="block font-medium">{member.fullName}</span>
-                            <span className="text-xs text-muted-foreground font-mono">{member.memberId}</span>
+                            <span className="text-xs text-muted-foreground font-mono">
+                              {member.memberId}{member.age !== null ? ` · ${member.age} yrs` : ""}{member.phone ? ` · ${member.phone}` : ""}
+                            </span>
                           </div>
                           {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
                         </div>
@@ -464,6 +475,12 @@ export function RecordPaymentDialog({ open, onOpenChange, onSuccess, preselected
                 Due: ₹{dueAmount} | Paid: ₹{paidAmount} | Pending: <span className={dueAmount - paidAmount > 0 ? "text-amber-500 font-bold" : "text-emerald-500 font-bold"}>₹{dueAmount - paidAmount}</span>
               </span>
             </div>
+
+            {submitError && (
+              <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive font-medium">
+                {submitError}
+              </div>
+            )}
 
             <div className="flex justify-end gap-3 pt-4 border-t border-border">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>

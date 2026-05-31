@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { 
-  CreditCard, Search, Landmark, CheckCircle, AlertTriangle, Plus, RefreshCw
+import {
+  CreditCard, Search, Landmark, CheckCircle, AlertTriangle, Plus, RefreshCw, Bell
 } from "lucide-react"
 import { GlassCard } from "@/components/shared/glass-card"
 import { StatusBadge } from "@/components/shared/status-badge"
@@ -10,7 +10,7 @@ import { formatDate } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
-  Table, TableBody, TableCell, TableHead, 
+  Table, TableBody, TableCell, TableHead,
   TableHeader, TableRow,
 } from "@/components/ui/table"
 import { RecordPaymentDialog } from "../../components/record-payment-dialog"
@@ -21,7 +21,7 @@ type AnnualFeeItem = {
   dueAmount: number
   paidAmount: number
   pendingAmount: number
-  status: 'PAID' | 'PENDING' | 'PARTIAL' | 'OVERDUE'
+  status: "PAID" | "PENDING" | "PARTIAL" | "OVERDUE"
   paidDate: string | null
   paymentMode: string | null
   receiptNumber: string | null
@@ -29,8 +29,17 @@ type AnnualFeeItem = {
   member: {
     fullName: string
     memberId: string
-    city: string | null
+    currentCity: string | null
   }
+}
+
+type PendingMember = {
+  id: string
+  memberId: string
+  fullName: string
+  age: number | null
+  phone: string | null
+  annualFeeStatus?: string
 }
 
 export function AnnualPaymentsClient() {
@@ -39,9 +48,15 @@ export function AnnualPaymentsClient() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState("ALL")
+  const [preselectedMemberId, setPreselectedMemberId] = useState<string | undefined>()
+  const [pendingMembers, setPendingMembers] = useState<PendingMember[]>([])
+  const [isLoadingPending, setIsLoadingPending] = useState(true)
+
+  const currentYear = new Date().getFullYear()
 
   useEffect(() => {
     fetchPayments()
+    fetchPendingMembers()
   }, [])
 
   const fetchPayments = async () => {
@@ -57,30 +72,110 @@ export function AnnualPaymentsClient() {
     }
   }
 
-  // Calculate totals dynamically from fetched records
+  const fetchPendingMembers = async () => {
+    try {
+      setIsLoadingPending(true)
+      const res = await fetch(`/api/members/eligible-for-fees?year=${currentYear}`)
+      const data = await res.json()
+      const all: PendingMember[] = data.data || []
+      // Only those who haven't fully paid
+      setPendingMembers(all.filter(m => m.annualFeeStatus !== "PAID"))
+    } catch (error) {
+      console.error("Failed to fetch pending members:", error)
+    } finally {
+      setIsLoadingPending(false)
+    }
+  }
+
+  const handleCollectFee = (memberId: string) => {
+    setPreselectedMemberId(memberId)
+    setIsDialogOpen(true)
+  }
+
+  const handleDialogClose = (open: boolean) => {
+    setIsDialogOpen(open)
+    if (!open) setPreselectedMemberId(undefined)
+  }
+
+  const handlePaymentSuccess = () => {
+    fetchPayments()
+    fetchPendingMembers()
+  }
+
+  // Calculate totals
   const totalCollected = fees.reduce((sum, item) => sum + item.paidAmount, 0)
   const totalPending = fees.reduce((sum, item) => sum + item.pendingAmount, 0)
   const totalOverdueCount = fees.filter(item => item.status === "OVERDUE").length
 
   // Filter records locally
   const filteredFees = fees.filter((fee) => {
-    const matchesSearch = 
+    const matchesSearch =
       fee.member.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       fee.member.memberId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (fee.receiptNumber && fee.receiptNumber.toLowerCase().includes(searchTerm.toLowerCase()))
-
     const matchesStatus = statusFilter === "ALL" || fee.status === statusFilter
-
     return matchesSearch && matchesStatus
   })
 
   return (
     <div className="space-y-6">
-      <RecordPaymentDialog 
-        open={isDialogOpen} 
-        onOpenChange={setIsDialogOpen} 
-        onSuccess={fetchPayments} 
+      <RecordPaymentDialog
+        open={isDialogOpen}
+        onOpenChange={handleDialogClose}
+        onSuccess={handlePaymentSuccess}
+        preselectedMemberId={preselectedMemberId}
       />
+
+      {/* Pending Fee Notifications */}
+      {!isLoadingPending && pendingMembers.length > 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <Bell className="h-4 w-4 text-amber-500 shrink-0" />
+            <h3 className="font-semibold text-amber-600 dark:text-amber-400 text-sm">
+              Fee Collection Pending — {pendingMembers.length} eligible member{pendingMembers.length !== 1 ? "s" : ""} (Male, 18–45 yrs) have not paid for {currentYear}
+            </h3>
+          </div>
+          <div className="overflow-x-auto rounded-lg border border-amber-500/20">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-amber-500/10 text-xs text-muted-foreground">
+                  <th className="text-left px-4 py-2 font-semibold">Member</th>
+                  <th className="text-left px-4 py-2 font-semibold">Age</th>
+                  <th className="text-left px-4 py-2 font-semibold">Phone</th>
+                  <th className="text-left px-4 py-2 font-semibold">Status</th>
+                  <th className="text-right px-4 py-2 font-semibold">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingMembers.map((m) => (
+                  <tr key={m.id} className="border-t border-amber-500/10 hover:bg-amber-500/5 transition-colors">
+                    <td className="px-4 py-2.5">
+                      <span className="font-medium text-foreground block">{m.fullName}</span>
+                      <span className="text-xs text-muted-foreground font-mono">{m.memberId}</span>
+                    </td>
+                    <td className="px-4 py-2.5 text-muted-foreground">{m.age !== null ? `${m.age} yrs` : "—"}</td>
+                    <td className="px-4 py-2.5 text-muted-foreground">{m.phone || "—"}</td>
+                    <td className="px-4 py-2.5">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-semibold uppercase">
+                        {m.annualFeeStatus || "PENDING"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <Button
+                        size="sm"
+                        onClick={() => handleCollectFee(m.id)}
+                        className="h-7 text-xs bg-primary/90 hover:bg-primary text-primary-foreground"
+                      >
+                        Collect Fee
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -127,7 +222,7 @@ export function AnnualPaymentsClient() {
               className="pl-9 bg-background/50 border-border/50 focus:border-primary"
             />
           </div>
-          
+
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -142,10 +237,10 @@ export function AnnualPaymentsClient() {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <Button variant="outline" size="icon" onClick={fetchPayments} className="shrink-0">
+          <Button variant="outline" size="icon" onClick={() => { fetchPayments(); fetchPendingMembers() }} className="shrink-0">
             <RefreshCw className="h-4 w-4" />
           </Button>
-          <Button 
+          <Button
             onClick={() => setIsDialogOpen(true)}
             className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20"
           >
@@ -201,27 +296,20 @@ export function AnnualPaymentsClient() {
                       <span className="text-xs font-mono">{fee.member.memberId}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="font-semibold text-foreground">
-                    ₹{fee.dueAmount}
-                  </TableCell>
-                  <TableCell className="font-semibold text-emerald-500">
-                    ₹{fee.paidAmount}
-                  </TableCell>
+                  <TableCell className="font-semibold text-foreground">₹{fee.dueAmount}</TableCell>
+                  <TableCell className="font-semibold text-emerald-500">₹{fee.paidAmount}</TableCell>
                   <TableCell className="text-sm">
                     {fee.paidDate ? formatDate(fee.paidDate) : "Pending"}
                   </TableCell>
                   <TableCell>
-                    <StatusBadge 
+                    <StatusBadge
                       status={
-                        fee.status === "PAID" 
-                          ? "paid" 
-                          : fee.status === "PARTIAL"
-                          ? "partial"
-                          : fee.status === "OVERDUE"
-                          ? "overdue"
+                        fee.status === "PAID" ? "paid"
+                          : fee.status === "PARTIAL" ? "partial"
+                          : fee.status === "OVERDUE" ? "overdue"
                           : "pending"
-                      } 
-                      size="sm" 
+                      }
+                      size="sm"
                     />
                   </TableCell>
                 </TableRow>

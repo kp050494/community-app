@@ -14,7 +14,6 @@ export const memberSchema = z.object({
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   education: z.string().optional().or(z.literal("")),
   occupationRole: z.string().optional().or(z.literal("")),
-  maritalStatus: z.enum(["SINGLE", "MARRIED", "WIDOWED", "DIVORCED"]).optional(),
   isActive: z.boolean().default(true),
 })
 

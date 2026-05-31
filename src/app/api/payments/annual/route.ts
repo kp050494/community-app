@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
             dob: true,
             family: {
               select: {
-                city: true
+                currentCity: true
               }
             }
           }

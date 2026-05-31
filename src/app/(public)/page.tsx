@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
-import { ArrowRight, Users, Calendar, Award, ChevronDown } from "lucide-react"
+import { ArrowRight, Users, Calendar, Award } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export default function Home() {
@@ -103,26 +103,11 @@ export default function Home() {
           
         </div>
         
-        {/* Scroll Indicator */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 1 }}
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center justify-center gap-2 text-muted-foreground"
-        >
-          <span className="text-xs font-semibold tracking-widest uppercase">Scroll</span>
-          <motion.div
-            animate={{ y: [0, 8, 0] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <ChevronDown className="w-5 h-5 text-primary" />
-          </motion.div>
-        </motion.div>
 
       </section>
 
       {/* ── STATS SECTION ───────────────────────────────────────────── */}
-      <section className="relative z-20 -mt-20 px-4 md:px-6">
+      <section className="relative bg-background px-4 md:px-6 py-16 md:py-20">
         <div className="container mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
             {[
@@ -131,13 +116,13 @@ export default function Home() {
               { label: "Yearly Events", value: "24+", icon: Calendar, delay: 0.2 },
               { label: "Years of Service", value: "10+", icon: Award, delay: 0.3 },
             ].map((stat, i) => (
-              <motion.div 
-                key={i} 
+              <motion.div
+                key={i}
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-100px" }}
                 transition={{ duration: 0.6, delay: stat.delay, ease: "easeOut" }}
-                className="glass p-6 md:p-8 rounded-3xl premium-card text-center bg-card/40 backdrop-blur-xl border border-white/10"
+                className="p-6 md:p-8 rounded-3xl text-center bg-card border border-border shadow-sm"
               >
                 <div className="inline-flex items-center justify-center w-12 h-12 mb-4 rounded-2xl bg-primary/10 text-primary">
                   <stat.icon className="w-6 h-6" />

@@ -2,8 +2,7 @@ import { NextResponse, NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { memberSchema } from "@/lib/validations/member"
-import { calculateAge } from "@/lib/utils"
-import { z } from "zod"
+import { calculateAge, formatMemberFullName, generateMemberId } from "@/lib/utils"
 
 export async function GET(req: NextRequest) {
   try {
@@ -26,6 +25,7 @@ export async function GET(req: NextRequest) {
         OR: [
           { firstName: { contains: search, mode: "insensitive" as const } },
           { surname: { contains: search, mode: "insensitive" as const } },
+          { fullName: { contains: search, mode: "insensitive" as const } },
           { memberId: { contains: search, mode: "insensitive" as const } },
           { phone: { contains: search, mode: "insensitive" as const } }
         ]
@@ -50,9 +50,12 @@ export async function GET(req: NextRequest) {
 
     const mappedMembers = members.map(m => {
       const age = m.dob ? calculateAge(m.dob) : null
+      const fullName = formatMemberFullName(m.firstName, m.surname, m.fullName)
       return {
         ...m,
-        fullName: `${m.firstName} ${m.surname}`,
+        firstName: m.firstName ?? "",
+        surname: m.surname ?? "",
+        fullName,
         age,
         telephoneNumber: m.phone,
         familyDetails: {
@@ -94,15 +97,22 @@ export async function POST(req: NextRequest) {
     }
     const body = validation.data
 
-    // Generate Member ID (SKPM-XXXX)
-    const count = await prisma.member.count()
-    const memberId = `SKPM-${(count + 1).toString().padStart(4, '0')}`
+    // Generate Member ID (SKPM-XXXX) — derive from max existing number to avoid
+    // collisions when members have been deleted or the DB was partially reset.
+    const allIds = await prisma.member.findMany({ select: { memberId: true } })
+    const maxNum = allIds.reduce((max, m) => {
+      const match = m.memberId.match(/^SKPM-(\d+)$/)
+      return match ? Math.max(max, parseInt(match[1], 10)) : max
+    }, 0)
+    const memberId = generateMemberId(maxNum + 1)
 
     const member = await prisma.member.create({
       data: {
         memberId,
         firstName: body.firstName,
         surname: body.surname,
+        fullName: `${body.firstName} ${body.surname}`,
+        joinedDate: new Date(),
         gender: body.gender,
         dob: body.dob ? new Date(body.dob) : null,
         phone: body.phone || null,
@@ -111,7 +121,6 @@ export async function POST(req: NextRequest) {
         education: body.education || null,
         bloodGroup: body.bloodGroup || null,
         address: body.address || null,
-        maritalStatus: body.maritalStatus || null,
         isActive: body.isActive ?? true,
         familyId: body.familyId
       },
