@@ -51,6 +51,7 @@ interface MemberFormDialogProps {
 const defaultValues: MemberFormValues = {
   familyId: "",
   firstName: "",
+  middleName: "",
   surname: "",
   dob: "",
   gender: "" as any,
@@ -65,6 +66,7 @@ const defaultValues: MemberFormValues = {
 
 export function MemberFormDialog({ open, onOpenChange, onSuccess, initialData }: MemberFormDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [families, setFamilies] = useState<FamilyOption[]>([])
   const [isLoadingFamilies, setIsLoadingFamilies] = useState(false)
 
@@ -81,6 +83,7 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess, initialData }:
     if (open) {
       loadFamilies()
       form.reset(initialData ?? defaultValues)
+      setSubmitError(null)
       if (initialData) {
         setSearchQuery(initialData.familyId)
       } else {
@@ -136,6 +139,7 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess, initialData }:
   const onSubmit = async (data: MemberFormValues) => {
     try {
       setIsSubmitting(true)
+      setSubmitError(null)
       const res = await fetch(initialData ? `/api/members/${initialData.id}` : "/api/members", {
         method: initialData ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
@@ -144,14 +148,18 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess, initialData }:
 
       if (!res.ok) {
         const errorBody = await res.json().catch(() => null)
-        throw new Error(errorBody?.error || "Failed to save member")
+        const msg = typeof errorBody?.error === "string"
+          ? errorBody.error
+          : "Failed to save member. Please check all fields and try again."
+        setSubmitError(msg)
+        return
       }
 
       form.reset(defaultValues)
       onSuccess()
       onOpenChange(false)
-    } catch (error) {
-      console.error(error)
+    } catch {
+      setSubmitError("An unexpected error occurred. Please try again.")
     } finally {
       setIsSubmitting(false)
     }
@@ -175,7 +183,7 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess, initialData }:
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-4">
             <div className="space-y-4">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-primary">Personal Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
                   name="firstName"
@@ -184,6 +192,22 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess, initialData }:
                       <FormLabel>First Name <span className="text-destructive">*</span></FormLabel>
                       <FormControl>
                         <Input placeholder="Ramesh" {...field} className="bg-background/50" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="middleName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Father&apos;s / Husband&apos;s Name <span className="text-destructive">*</span>
+                        <span className="ml-1 text-[10px] text-muted-foreground font-normal">(middle name)</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Suresh" {...field} className="bg-background/50" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -410,7 +434,13 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess, initialData }:
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-6 border-t border-border">
+            {submitError && (
+              <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+                {submitError}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-border">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>

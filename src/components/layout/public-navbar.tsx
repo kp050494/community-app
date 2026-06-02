@@ -6,20 +6,23 @@ import { usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "motion/react"
 import { Menu, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-const NAV_LINKS = [
-  { name: "Home", href: "/" },
-  { name: "About", href: "/about" },
-  { name: "Events", href: "/events" },
-  { name: "Notices", href: "/notices" },
-  { name: "Gallery", href: "/gallery" },
-  { name: "Contact", href: "/contact" },
-]
+import { useLanguage } from "@/lib/language-context"
+import { LanguageToggle } from "@/components/shared/language-toggle"
 
 export function PublicNavbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const pathname = usePathname()
+  const { t } = useLanguage()
+
+  const NAV_LINKS = [
+    { name: t.nav.home, href: "/" },
+    { name: t.nav.about, href: "/about" },
+    { name: t.nav.events, href: "/events" },
+    { name: t.nav.notices, href: "/notices" },
+    { name: t.nav.gallery, href: "/gallery" },
+    { name: t.nav.contact, href: "/contact" },
+  ]
 
   useEffect(() => {
     const handleScroll = () => {
@@ -52,6 +55,11 @@ export function PublicNavbar() {
                 height={56}
                 className="object-contain transition-transform duration-300 group-hover:scale-[1.05] shrink-0"
               />
+              <div className="flex flex-col">
+                <span className="font-heading text-sm font-bold tracking-tight leading-tight text-primary transition-colors duration-500">
+                  શ્રી ક.ક.પા. પાંડેેસરા મિત્ર મંડળ
+                </span>
+              </div>
             </Link>
 
             {/* Desktop Navigation */}
@@ -82,20 +90,23 @@ export function PublicNavbar() {
                   </Link>
                 )
               })}
-              
+              <LanguageToggle />
             </nav>
 
-            {/* Mobile Menu Toggle */}
-            <button
-              className="relative z-50 p-2 -mr-2 md:hidden text-foreground focus:outline-none"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
-            </button>
+            {/* Mobile: language toggle + hamburger */}
+            <div className="flex items-center gap-2 md:hidden">
+              <LanguageToggle />
+              <button
+                className="relative z-50 p-2 -mr-2 text-foreground focus:outline-none"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? (
+                  <X className="w-6 h-6" />
+                ) : (
+                  <Menu className="w-6 h-6" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </header>

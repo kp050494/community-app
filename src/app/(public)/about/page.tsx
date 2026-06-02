@@ -6,76 +6,59 @@ import { GlassCard } from "@/components/shared/glass-card"
 import { FloatingOrbs } from "@/components/shared/floating-orbs"
 import { ScrollReveal } from "@/components/shared/scroll-reveal"
 import { SectionHeader } from "@/components/shared/section-header"
+import { useLanguage } from "@/lib/language-context"
 
 const leaders = [
   {
-    name: "Ramanlal Patel",
-    role: "President",
+    nameKey: "Ramanlal Patel",
+    roleKey: "president" as const,
     term: "2024 - Present",
     image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300&h=300",
   },
   {
-    name: "Devji Patel",
-    role: "Vice President",
+    nameKey: "Devji Patel",
+    roleKey: "vicePresident" as const,
     term: "2024 - Present",
     image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=300&h=300",
   },
   {
-    name: "Kanti Patel",
-    role: "General Secretary",
+    nameKey: "Kanti Patel",
+    roleKey: "generalSecretary" as const,
     term: "2022 - Present",
     image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=300&h=300",
   },
   {
-    name: "Harish Patel",
-    role: "Treasurer",
+    nameKey: "Harish Patel",
+    roleKey: "treasurer" as const,
     term: "2022 - Present",
     image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=300&h=300",
   },
 ]
 
-const milestones = [
-  {
-    year: "1998",
-    title: "Foundation of Mandal",
-    description: "Established to support Kutch Kadwa Patidar community families arriving in Pandesara, Surat.",
-  },
-  {
-    year: "2005",
-    title: "First Community Hall",
-    description: "Inaugurated our first dedicated community gathering center for festivals and meetings.",
-  },
-  {
-    year: "2012",
-    title: "Education Trust Launch",
-    description: "Created a scholarship fund to support higher education for meritorious community students.",
-  },
-  {
-    year: "2020",
-    title: "COVID Support Initiative",
-    description: "Distributed medical kits, food packets, and organized emergency oxygen support clinics.",
-  },
-  {
-    year: "2025",
-    title: "Digital Platform Launch",
-    description: "Pioneered a modern digital community network to connect over 2,000+ members seamlessly.",
-  },
-]
-
 export default function AboutPage() {
+  const { t } = useLanguage()
+
+  const milestones = [
+    { year: "1998", title: t.about.foundationTitle, description: t.about.foundationDesc },
+    { year: "2005", title: t.about.hallTitle, description: t.about.hallDesc },
+    { year: "2012", title: t.about.educationTitle, description: t.about.educationDesc },
+    { year: "2020", title: t.about.covidTitle, description: t.about.covidDesc },
+    { year: "2025", title: t.about.digitalTitle, description: t.about.digitalDesc },
+  ]
+
   return (
     <div className="relative min-h-screen bg-background overflow-hidden py-16 px-4 md:px-8">
       <FloatingOrbs variant="mixed" className="opacity-20" />
 
       <div className="max-w-7xl mx-auto space-y-24 relative z-10">
-        
+
         {/* Header */}
         <ScrollReveal direction="up">
           <SectionHeader
-            overline="Our Identity"
-            title="About Pandesara Mitra Mandal"
+            overline={t.about.overline}
+            title={t.about.title}
             gujaratiSubtitle="શ્રી કચ્છ કડવા પાટીદાર પાંદેસરા મિત્ર મંડળ"
-            description="Preserving our heritage, supporting our families, and building a stronger future in Pandesara, Surat."
+            description={t.about.description}
             centered
           />
         </ScrollReveal>
@@ -88,9 +71,9 @@ export default function AboutPage() {
                 <div className="w-12 h-12 rounded-xl bg-primary/20 text-primary flex items-center justify-center mb-6">
                   <Target className="w-6 h-6" />
                 </div>
-                <h3 className="text-2xl font-bold font-heading text-foreground mb-4">Our Mission</h3>
+                <h3 className="text-2xl font-bold font-heading text-foreground mb-4">{t.about.ourMission}</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  To unite and empower the Kutch Kadwa Patidar families living in Pandesara by providing a solid network of social, economic, cultural, and educational support, fostering brotherhood and keeping our cultural traditions thriving for generations.
+                  {t.about.missionText}
                 </p>
               </div>
               <div className="border-t border-primary/20 mt-8 pt-4 text-xs font-semibold text-primary tracking-widest uppercase">
@@ -105,9 +88,9 @@ export default function AboutPage() {
                 <div className="w-12 h-12 rounded-xl bg-primary/20 text-primary flex items-center justify-center mb-6">
                   <Eye className="w-6 h-6" />
                 </div>
-                <h3 className="text-2xl font-bold font-heading text-foreground mb-4">Our Vision</h3>
+                <h3 className="text-2xl font-bold font-heading text-foreground mb-4">{t.about.ourVision}</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  To build an exemplary, highly interconnected, and prosperous community where every member thrives educationally and financially, preserving traditional Kutch values while embracing modern progress and global opportunities.
+                  {t.about.visionText}
                 </p>
               </div>
               <div className="border-t border-primary/20 mt-8 pt-4 text-xs font-semibold text-primary tracking-widest uppercase">
@@ -123,15 +106,14 @@ export default function AboutPage() {
             <div className="absolute right-0 bottom-0 opacity-[0.03] text-primary pointer-events-none transform translate-y-12 translate-x-12">
               <Landmark className="w-[300px] h-[300px]" />
             </div>
-            
             <div className="max-w-3xl">
-              <div className="text-xs font-bold text-primary tracking-widest uppercase mb-2">Our Origins</div>
-              <h2 className="text-3xl md:text-4xl font-bold font-heading text-foreground mb-6">A Legacy of Unity</h2>
+              <div className="text-xs font-bold text-primary tracking-widest uppercase mb-2">{t.about.ourOrigins}</div>
+              <h2 className="text-3xl md:text-4xl font-bold font-heading text-foreground mb-6">{t.about.legacyTitle}</h2>
               <p className="text-muted-foreground leading-relaxed mb-6">
-                In the late 1990s, as several hardworking families migrated from the Kutch region in Gujarat to the industrial hub of Pandesara, Surat, a need arose for a strong support network. In 1998, under the guidance of our visionary elders, **Shree Kutch Kadwa Patidar Pandesara Mitra Mandal** was formed.
+                {t.about.legacyP1}
               </p>
               <p className="text-muted-foreground leading-relaxed">
-                What started as a small group of committed individuals gathering in small homes has now grown into a robust, vibrant community representing over 500+ families and 2,000+ individual members. We host annual cultural events, support youth education, run medical clinics, and preserve the deep-seated cultural ethos of our homeland, Kutch.
+                {t.about.legacyP2}
               </p>
             </div>
           </GlassCard>
@@ -140,7 +122,7 @@ export default function AboutPage() {
         {/* Timeline Milestones */}
         <div className="space-y-12">
           <SectionHeader
-            title="Our Milestones"
+            title={t.about.milestones}
             gujaratiSubtitle="ઐતિહાસિક પડાવો"
             centered
           />
@@ -152,19 +134,12 @@ export default function AboutPage() {
                 <ScrollReveal
                   key={index}
                   direction={isEven ? "left" : "right"}
-                  className={`relative flex flex-col md:flex-row items-start md:items-center ${
-                    isEven ? "md:justify-start" : "md:justify-end"
-                  }`}
+                  className={`relative flex flex-col md:flex-row items-start md:items-center ${isEven ? "md:justify-start" : "md:justify-end"}`}
                 >
-                  {/* Timeline Dot */}
                   <div className="absolute left-[-9px] md:left-1/2 md:translate-x-[-9px] w-4 h-4 rounded-full bg-primary border-4 border-background z-20 shadow-[0_0_10px_rgba(212,168,83,0.8)]" />
-
-                  {/* Card Container */}
                   <div className={`w-full md:w-[45%] pl-6 md:pl-0 ${isEven ? "md:pr-8 md:text-right" : "md:pl-8"}`}>
                     <GlassCard className="p-6">
-                      <span className="text-2xl font-bold font-heading text-primary block mb-1">
-                        {item.year}
-                      </span>
+                      <span className="text-2xl font-bold font-heading text-primary block mb-1">{item.year}</span>
                       <h4 className="text-lg font-bold text-foreground mb-2">{item.title}</h4>
                       <p className="text-sm text-muted-foreground">{item.description}</p>
                     </GlassCard>
@@ -175,12 +150,12 @@ export default function AboutPage() {
           </div>
         </div>
 
-        {/* Executive Committee / Leadership */}
+        {/* Executive Committee */}
         <div className="space-y-12">
           <SectionHeader
-            title="Executive Committee"
+            title={t.about.executiveCommittee}
             gujaratiSubtitle="કાર્યકારી સમિતિ"
-            description="The dedicated leaders directing and supporting the vision of the Pandesara Mitra Mandal."
+            description={t.about.committeeDesc}
             centered
           />
 
@@ -190,18 +165,18 @@ export default function AboutPage() {
                 <GlassCard variant="default" hover className="overflow-hidden text-center group">
                   <div className="h-64 overflow-hidden relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img 
-                      src={leader.image} 
-                      alt={leader.name} 
+                    <img
+                      src={leader.image}
+                      alt={leader.nameKey}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center p-4">
-                      <p className="text-xs text-primary font-bold tracking-widest uppercase">Member Since {leader.term.split(" ")[0]}</p>
+                      <p className="text-xs text-primary font-bold tracking-widest uppercase">{t.about.memberSince} {leader.term.split(" ")[0]}</p>
                     </div>
                   </div>
                   <div className="p-6">
-                    <h4 className="text-xl font-bold font-heading text-foreground">{leader.name}</h4>
-                    <p className="text-sm font-semibold text-primary mt-1">{leader.role}</p>
+                    <h4 className="text-xl font-bold font-heading text-foreground">{leader.nameKey}</h4>
+                    <p className="text-sm font-semibold text-primary mt-1">{t.about[leader.roleKey]}</p>
                     <p className="text-xs text-muted-foreground mt-2">{leader.term}</p>
                   </div>
                 </GlassCard>

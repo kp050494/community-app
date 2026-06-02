@@ -3,6 +3,7 @@ import { z } from "zod"
 export const memberSchema = z.object({
   familyId: z.string().min(1, "Family is required"),
   firstName: z.string().min(2, "First name must be at least 2 characters"),
+  middleName: z.string().min(2, "Middle name (father's name) must be at least 2 characters"),
   surname: z.string().min(2, "Surname must be at least 2 characters"),
   dob: z.string().refine((val) => !isNaN(Date.parse(val)), {
     message: "Invalid date of birth",
@@ -14,7 +15,7 @@ export const memberSchema = z.object({
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   education: z.string().optional().or(z.literal("")),
   occupationRole: z.string().optional().or(z.literal("")),
-  isActive: z.boolean().default(true),
+  isActive: z.boolean(),
 })
 
 export type MemberFormValues = z.infer<typeof memberSchema>

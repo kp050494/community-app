@@ -1,22 +1,19 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { 
-  Search, Plus, MoreHorizontal, 
-  FileEdit, Trash2, Eye, Calendar, MapPin
+import {
+  Search, Plus,
+  FileEdit, Trash2, Users, Calendar, MapPin
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
-  Table, TableBody, TableCell, TableHead, 
+  Table, TableBody, TableCell, TableHead,
   TableHeader, TableRow,
 } from "@/components/ui/table"
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, 
-  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { EventFormDialog } from "./event-form-dialog"
-import { StatusBadge } from "@/components/shared/status-badge"
+import { EventParticipantsDialog } from "./event-participants-dialog"
+import { useLanguage } from "@/lib/language-context"
 
 type EventItem = {
   id: string
@@ -37,6 +34,10 @@ export function EventsClient() {
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [participantsEvent, setParticipantsEvent] = useState<EventItem | null>(null)
+  const [participantsOpen, setParticipantsOpen] = useState(false)
+  const { t } = useLanguage()
+  const e = t.admin.events
 
   useEffect(() => {
     fetchEvents()
@@ -56,13 +57,13 @@ export function EventsClient() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this event? This cannot be undone.")) return
+    if (!confirm(e.confirmDelete)) return
     try {
       const res = await fetch(`/api/events/${id}`, { method: "DELETE" })
       if (res.ok) {
         fetchEvents()
       } else {
-        alert("Failed to delete event")
+        alert(e.deleteFailed)
       }
     } catch (error) {
       console.error(error)
@@ -75,27 +76,49 @@ export function EventsClient() {
     (event.venue && event.venue.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
-  const getEventStatusBadge = (status: string) => {
-    switch (status) {
-      case "ONGOING":
-        return <StatusBadge status="warning" size="sm" />
-      case "COMPLETED":
-        return <StatusBadge status="success" size="sm" />
-      case "CANCELLED":
-        return <StatusBadge status="error" size="sm" />
-      case "DRAFT":
-        return <StatusBadge status="pending" size="sm" />
-      default:
-        return <StatusBadge status="paid" size="sm" />
-    }
+  const getEventStatusBadge = (status: string, dateStr: string) => {
+    if (status === "DRAFT")
+      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted text-muted-foreground">{e.statusDraft}</span>
+    if (status === "CANCELLED")
+      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-destructive/10 text-destructive">{e.statusCancelled}</span>
+    if (status === "COMPLETED")
+      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600">{e.statusCompleted}</span>
+    if (status === "ONGOING")
+      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600">{e.statusOngoing}</span>
+
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    const eventDate = new Date(dateStr); eventDate.setHours(0, 0, 0, 0)
+    const diffDays = Math.round((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+
+    if (diffDays < 0)
+      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-destructive/10 text-destructive">{e.statusOverdue}</span>
+    if (diffDays === 0)
+      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/15 text-primary">{e.statusToday}</span>
+    if (diffDays === 1)
+      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600">{e.statusTomorrow}</span>
+    if (diffDays <= 7)
+      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600">{t.admin.common.inDays} {diffDays} {t.admin.common.days}</span>
+    if (diffDays <= 30)
+      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600">{t.admin.common.inDays} {diffDays} {t.admin.common.days}</span>
+    return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted text-muted-foreground">{t.admin.common.inDays} {diffDays} {t.admin.common.days}</span>
+  }
+
+  const openParticipants = (event: EventItem) => {
+    setParticipantsEvent(event)
+    setParticipantsOpen(true)
   }
 
   return (
     <div className="space-y-6">
-      <EventFormDialog 
-        open={isDialogOpen} 
-        onOpenChange={setIsDialogOpen} 
-        onSuccess={fetchEvents} 
+      <EventFormDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onSuccess={fetchEvents}
+      />
+      <EventParticipantsDialog
+        event={participantsEvent}
+        open={participantsOpen}
+        onOpenChange={setParticipantsOpen}
       />
 
       {/* Action Bar */}
@@ -104,7 +127,7 @@ export function EventsClient() {
           <div className="relative w-full sm:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search events by title or venue..."
+              placeholder={e.searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 bg-background/50 border-border/50 focus:border-primary"
@@ -112,12 +135,12 @@ export function EventsClient() {
           </div>
         </div>
         <div className="flex items-center space-x-2 w-full sm:w-auto">
-          <Button 
+          <Button
             onClick={() => setIsDialogOpen(true)}
             className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20"
           >
             <Plus className="mr-2 h-4 w-4" />
-            Add Event
+            {e.addEvent}
           </Button>
         </div>
       </div>
@@ -127,12 +150,12 @@ export function EventsClient() {
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="font-semibold">Event Details</TableHead>
-              <TableHead className="font-semibold">Date & Time</TableHead>
-              <TableHead className="font-semibold">Venue</TableHead>
-              <TableHead className="font-semibold">Fees (INR)</TableHead>
-              <TableHead className="font-semibold">Status</TableHead>
-              <TableHead className="text-right font-semibold">Actions</TableHead>
+              <TableHead className="font-semibold">{e.colEventDetails}</TableHead>
+              <TableHead className="font-semibold">{e.colDateTime}</TableHead>
+              <TableHead className="font-semibold">{e.colVenue}</TableHead>
+              <TableHead className="font-semibold">{e.colFees}</TableHead>
+              <TableHead className="font-semibold">{e.colStatus}</TableHead>
+              <TableHead className="text-right font-semibold">{e.colActions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -150,7 +173,7 @@ export function EventsClient() {
             ) : filteredEvents.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                  No events found. Create your first calendar event above.
+                  {e.noEvents}
                 </TableCell>
               </TableRow>
             ) : (
@@ -179,37 +202,35 @@ export function EventsClient() {
                     </div>
                   </TableCell>
                   <TableCell className="text-foreground font-semibold">
-                    {event.isFeeRequired ? `₹${event.feeAmount}` : <span className="text-emerald-500 text-xs">Free</span>}
+                    {event.isFeeRequired ? `₹${event.feeAmount}` : <span className="text-emerald-500 text-xs">{e.freeEntry}</span>}
                   </TableCell>
                   <TableCell>
-                    {getEventStatusBadge(event.status)}
+                    {getEventStatusBadge(event.status, event.date)}
                   </TableCell>
                   <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger render={<Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity" />}>
-                        <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-[160px] bg-card border-border shadow-xl">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem className="cursor-pointer">
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Dues
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer text-primary">
-                          <FileEdit className="mr-2 h-4 w-4" />
-                          Edit Event
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          onClick={() => handleDelete(event.id)}
-                          className="cursor-pointer text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        title="Manage Participants"
+                        onClick={() => openParticipants(event)}
+                        className="flex items-center gap-1 p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors text-xs font-medium"
+                      >
+                        <Users className="h-4 w-4" />
+                        <span>{event._count.eventPayments}</span>
+                      </button>
+                      <button
+                        title="Edit Event"
+                        className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        <FileEdit className="h-4 w-4" />
+                      </button>
+                      <button
+                        title="Delete Event"
+                        onClick={() => handleDelete(event.id)}
+                        className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

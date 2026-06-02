@@ -1,31 +1,86 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { motion } from "motion/react"
-import { 
-  Users, Home, Calendar, CreditCard, 
+import {
+  Users, Home, Calendar, CreditCard,
   TrendingUp, Activity, Bell, FileText
 } from "lucide-react"
+import { useLanguage } from "@/lib/language-context"
+
+type DashboardStats = {
+  totalMembers: number
+  totalFamilies: number
+  upcomingEventsCount: number
+  nextEventName: string | null
+  feeFormatted: string
+  currentYear: number
+}
 
 export default function AdminDashboard() {
+  const { t } = useLanguage()
+  const d = t.admin.dashboard
+
+  const [liveStats, setLiveStats] = useState<DashboardStats | null>(null)
+
+  useEffect(() => {
+    fetch("/api/admin/stats")
+      .then(r => r.json())
+      .then(data => { if (data.success) setLiveStats(data.data) })
+      .catch(() => {})
+  }, [])
+
+  const feeLabel = liveStats
+    ? `${t.admin.dashboard.feeCollected.replace("2025", String(liveStats.currentYear))}`
+    : d.feeCollected
+
   const stats = [
-    { label: "Total Members", value: "2,451", trend: "+12% from last month", icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
-    { label: "Families", value: "532", trend: "+4 new this month", icon: Home, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-    { label: "Upcoming Events", value: "3", trend: "Next: Navratri Mahotsav", icon: Calendar, color: "text-amber-500", bg: "bg-amber-500/10" },
-    { label: "Fee Collected (2025)", value: "₹4.2L", trend: "85% of target", icon: CreditCard, color: "text-primary", bg: "bg-primary/10" },
+    {
+      label: d.totalMembers,
+      value: liveStats ? liveStats.totalMembers.toLocaleString() : "—",
+      trend: d.trendMembers,
+      icon: Users, color: "text-blue-500", bg: "bg-blue-500/10",
+    },
+    {
+      label: d.families,
+      value: liveStats ? liveStats.totalFamilies.toLocaleString() : "—",
+      trend: d.trendFamilies,
+      icon: Home, color: "text-emerald-500", bg: "bg-emerald-500/10",
+    },
+    {
+      label: d.upcomingEvents,
+      value: liveStats ? String(liveStats.upcomingEventsCount) : "—",
+      trend: liveStats?.nextEventName ? `Next: ${liveStats.nextEventName}` : d.trendEvents,
+      icon: Calendar, color: "text-amber-500", bg: "bg-amber-500/10",
+    },
+    {
+      label: feeLabel,
+      value: liveStats ? liveStats.feeFormatted : "—",
+      trend: d.trendFee,
+      icon: CreditCard, color: "text-primary", bg: "bg-primary/10",
+    },
   ]
 
   const recentActivities = [
-    { id: 1, text: "New family registration: Patel Family (Pandesara)", time: "2 hours ago", icon: Users },
-    { id: 2, text: "Payment received: Annual Fee 2025 (SKPM-0492)", time: "5 hours ago", icon: CreditCard },
-    { id: 3, text: "New notice published: Annual General Meeting", time: "1 day ago", icon: Bell },
-    { id: 4, text: "Event registration: 150 members registered for Picnic", time: "2 days ago", icon: Calendar },
+    { id: 1, text: d.activity1, time: d.hoursAgo2, icon: Users },
+    { id: 2, text: d.activity2, time: d.hoursAgo5, icon: CreditCard },
+    { id: 3, text: d.activity3, time: d.dayAgo1, icon: Bell },
+    { id: 4, text: d.activity4, time: d.daysAgo2, icon: Calendar },
+  ]
+
+  const quickActions = [
+    { label: d.addNewMember, icon: Users },
+    { label: d.publishNotice, icon: Bell },
+    { label: d.createEvent, icon: Calendar },
+    { label: d.recordPayment, icon: CreditCard },
+    { label: d.generateReport, icon: FileText },
   ]
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold font-heading text-foreground tracking-tight">Dashboard Overview</h1>
-        <p className="text-muted-foreground mt-1">Here's what's happening in your community today.</p>
+        <h1 className="text-3xl font-bold font-heading text-foreground tracking-tight">{d.title}</h1>
+        <p className="text-muted-foreground mt-1">{d.subtitle}</p>
       </div>
 
       {/* STATS GRID */}
@@ -66,8 +121,8 @@ export default function AdminDashboard() {
           className="lg:col-span-2 p-6 bg-card border border-border rounded-2xl shadow-sm"
         >
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold font-heading text-foreground">Recent Activity</h2>
-            <button className="text-sm font-medium text-primary hover:underline">View all</button>
+            <h2 className="text-xl font-bold font-heading text-foreground">{d.recentActivity}</h2>
+            <button className="text-sm font-medium text-primary hover:underline">{d.viewAll}</button>
           </div>
           <div className="space-y-6">
             {recentActivities.map((activity, i) => (
@@ -96,16 +151,10 @@ export default function AdminDashboard() {
           transition={{ duration: 0.4, delay: 0.5 }}
           className="p-6 bg-card border border-border rounded-2xl shadow-sm"
         >
-          <h2 className="text-xl font-bold font-heading text-foreground mb-6">Quick Actions</h2>
+          <h2 className="text-xl font-bold font-heading text-foreground mb-6">{d.quickActions}</h2>
           <div className="space-y-3">
-            {[
-              { label: "Add New Member", icon: Users },
-              { label: "Publish Notice", icon: Bell },
-              { label: "Create Event", icon: Calendar },
-              { label: "Record Payment", icon: CreditCard },
-              { label: "Generate Report", icon: FileText },
-            ].map((action, i) => (
-              <button 
+            {quickActions.map((action, i) => (
+              <button
                 key={i}
                 className="w-full flex items-center gap-3 p-4 rounded-xl bg-muted/50 border border-transparent hover:border-border hover:bg-muted transition-all group text-left"
               >

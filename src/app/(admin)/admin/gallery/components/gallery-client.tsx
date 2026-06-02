@@ -250,7 +250,7 @@ export function GalleryClient({ events }: { events: Event[] }) {
 
             <div className="space-y-1.5">
               <label className="text-sm font-semibold">Linked Event (optional)</label>
-              <Select value={eventId} onValueChange={setEventId}>
+              <Select value={eventId} onValueChange={(v) => setEventId(v ?? "")}>
                 <SelectTrigger className="bg-background/50">
                   <SelectValue placeholder="Select an event..." />
                 </SelectTrigger>

@@ -10,10 +10,12 @@ type MemberDetailsDialogProps = {
     id: string
     memberId: string
     firstName?: string | null
+    middleName?: string | null
     surname?: string | null
     fullName?: string | null
     dob?: string | null
-    gender: string
+    gender?: string | null
+    isActive?: boolean
     bloodGroup?: string | null
     address?: string | null
     phone?: string | null
@@ -22,12 +24,12 @@ type MemberDetailsDialogProps = {
     occupationRole?: string | null
     familyDetails?: {
       familyId: string
-      businessName: string
+      businessName: string | null
       familyName: string
       kutchVatan?: string | null
       currentCity?: string | null
       businessAddress?: string | null
-    }
+    } | null
     createdAt?: string
     updatedAt?: string
   }

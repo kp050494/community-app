@@ -48,12 +48,25 @@ export async function GET(req: NextRequest) {
       prisma.member.count({ where })
     ])
 
+    // Fetch middleName separately via raw SQL since Prisma client cache may not have the field yet
+    const memberIds = members.map(m => m.id)
+    const middleNames: { id: string; middleName: string | null }[] =
+      memberIds.length > 0
+        ? await prisma.$queryRawUnsafe(
+            `SELECT id, "middleName" FROM members WHERE id = ANY($1::text[])`,
+            memberIds
+          )
+        : []
+    const middleNameMap = new Map(middleNames.map(r => [r.id, r.middleName]))
+
     const mappedMembers = members.map(m => {
       const age = m.dob ? calculateAge(m.dob) : null
+      const middleName = middleNameMap.get(m.id) ?? null
       const fullName = formatMemberFullName(m.firstName, m.surname, m.fullName)
       return {
         ...m,
         firstName: m.firstName ?? "",
+        middleName,
         surname: m.surname ?? "",
         fullName,
         age,
@@ -111,7 +124,7 @@ export async function POST(req: NextRequest) {
         memberId,
         firstName: body.firstName,
         surname: body.surname,
-        fullName: `${body.firstName} ${body.surname}`,
+        fullName: `${body.firstName} ${body.middleName} ${body.surname}`,
         joinedDate: new Date(),
         gender: body.gender,
         dob: body.dob ? new Date(body.dob) : null,
@@ -124,20 +137,25 @@ export async function POST(req: NextRequest) {
         isActive: body.isActive ?? true,
         familyId: body.familyId
       },
-      include: {
-        family: true
-      }
+      include: { family: true }
     })
 
-    return NextResponse.json(member, { status: 201 })
-  } catch (error) {
-    console.error("Error creating member:", error)
-    if (error instanceof Error && error.message.includes("fk_")) {
-      return NextResponse.json(
-        { error: "Family not found" },
-        { status: 404 }
+    // Save middleName via raw SQL (bypasses Prisma client validation until next full regeneration)
+    if (body.middleName) {
+      await prisma.$executeRawUnsafe(
+        `UPDATE members SET "middleName" = $1 WHERE id = $2`,
+        body.middleName,
+        member.id
       )
     }
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+
+    return NextResponse.json({ ...member, middleName: body.middleName || null }, { status: 201 })
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error("Error creating member:", msg)
+    if (msg.includes("fk_") || msg.includes("Foreign key")) {
+      return NextResponse.json({ error: "Family not found" }, { status: 404 })
+    }
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

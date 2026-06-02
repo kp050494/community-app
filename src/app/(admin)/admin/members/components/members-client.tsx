@@ -2,29 +2,27 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "motion/react"
-import { 
-  Search, Plus, Filter, MoreHorizontal, 
-  FileEdit, Trash2, Eye, Download, UserPlus
+import {
+  Search, Plus, Filter,
+  FileEdit, Trash2, Eye, Download,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
-  Table, TableBody, TableCell, TableHead, 
+  Table, TableBody, TableCell, TableHead,
   TableHeader, TableRow,
 } from "@/components/ui/table"
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
-  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { formatDate } from "@/lib/utils"
 import { MemberDetailsDialog } from "./member-details-dialog"
 import { MemberFormDialog } from "./member-form-dialog"
+import { useLanguage } from "@/lib/language-context"
 
 type Member = {
   id: string
   memberId: string
   firstName?: string | null
+  middleName?: string | null
   surname?: string | null
   fullName?: string | null
   phone?: string | null
@@ -48,30 +46,52 @@ type Member = {
   } | null
 }
 
+const PAGE_SIZE = 10
+
 export function MembersClient() {
   const [members, setMembers] = useState<Member[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
   const [memberDialogOpen, setMemberDialogOpen] = useState(false)
   const [memberDialogData, setMemberDialogData] = useState<Member | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [detailsMember, setDetailsMember] = useState<Member | null>(null)
+  const { t } = useLanguage()
+  const m = t.admin.members
 
   useEffect(() => {
-    fetchMembers()
-  }, [])
+    fetchMembers(currentPage, searchTerm)
+  }, [currentPage])
 
-  const fetchMembers = async () => {
+  // Reset to page 1 and re-fetch when search changes
+  useEffect(() => {
+    setCurrentPage(1)
+    fetchMembers(1, searchTerm)
+  }, [searchTerm])
+
+  const fetchMembers = async (page: number, search: string) => {
     try {
       setIsLoading(true)
-      const res = await fetch("/api/members")
+      const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
+      if (search) params.set("search", search)
+      const res = await fetch(`/api/members?${params.toString()}`)
       const data = await res.json()
       setMembers(data.data || [])
+      setTotal(data.total || 0)
+      setTotalPages(data.totalPages || 1)
     } catch (error) {
       console.error("Failed to fetch members:", error)
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > totalPages) return
+    setCurrentPage(newPage)
   }
 
   const handleCreateMember = () => {
@@ -131,22 +151,40 @@ export function MembersClient() {
   }
 
   const handleDeleteMember = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this member? This cannot be undone.")) return
+    if (!confirm(m.confirmDelete)) return
     const res = await fetch(`/api/members/${id}`, { method: "DELETE" })
     if (!res.ok) {
-      alert("Failed to delete member")
+      alert(m.deleteFailed)
       return
     }
-    fetchMembers()
+    // If last item on page, go back one page
+    const newPage = members.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage
+    setCurrentPage(newPage)
+    fetchMembers(newPage, searchTerm)
   }
 
   return (
     <div className="space-y-6">
-      <MemberFormDialog 
-        open={memberDialogOpen} 
-        onOpenChange={setMemberDialogOpen} 
-        onSuccess={fetchMembers} 
-        initialData={memberDialogData ?? undefined}
+      <MemberFormDialog
+        open={memberDialogOpen}
+        onOpenChange={setMemberDialogOpen}
+        onSuccess={() => fetchMembers(currentPage, searchTerm)}
+        initialData={memberDialogData ? {
+          id: memberDialogData.id,
+          familyId: memberDialogData.familyDetails?.id ?? "",
+          firstName: memberDialogData.firstName ?? "",
+          middleName: memberDialogData.middleName ?? "",
+          surname: memberDialogData.surname ?? "",
+          gender: (memberDialogData.gender as "MALE" | "FEMALE" | "OTHER") ?? "MALE",
+          dob: memberDialogData.dob ? new Date(memberDialogData.dob).toISOString().slice(0, 10) : "",
+          bloodGroup: memberDialogData.bloodGroup ?? "",
+          phone: memberDialogData.phone ?? "",
+          email: memberDialogData.email ?? "",
+          address: memberDialogData.address ?? "",
+          education: memberDialogData.education ?? "",
+          occupationRole: memberDialogData.occupationRole ?? "",
+          isActive: memberDialogData.isActive,
+        } : undefined}
       />
       <MemberDetailsDialog
         open={detailsOpen}
@@ -172,7 +210,7 @@ export function MembersClient() {
           <div className="relative w-full sm:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search members..."
+              placeholder={m.searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 bg-background/50 border-border/50 focus:border-primary"
@@ -185,14 +223,14 @@ export function MembersClient() {
         <div className="flex items-center space-x-2 w-full sm:w-auto">
           <Button variant="outline" className="w-full sm:w-auto bg-background/50" onClick={handleExportCSV}>
             <Download className="mr-2 h-4 w-4" />
-            Export CSV
+            {m.exportCsv}
           </Button>
-          <Button 
+          <Button
             onClick={handleCreateMember}
             className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20"
           >
             <Plus className="mr-2 h-4 w-4" />
-            Add Member
+            {m.addMember}
           </Button>
         </div>
       </div>
@@ -202,13 +240,13 @@ export function MembersClient() {
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="font-semibold">Member ID</TableHead>
-              <TableHead className="font-semibold">Name</TableHead>
-              <TableHead className="font-semibold">Contact</TableHead>
-              <TableHead className="font-semibold">Family / City</TableHead>
-              <TableHead className="font-semibold">Status</TableHead>
-              <TableHead className="font-semibold">Joined</TableHead>
-              <TableHead className="text-right font-semibold">Actions</TableHead>
+              <TableHead className="font-semibold">{m.colMemberId}</TableHead>
+              <TableHead className="font-semibold">{m.colName}</TableHead>
+              <TableHead className="font-semibold">{m.colContact}</TableHead>
+              <TableHead className="font-semibold">{m.colFamily}</TableHead>
+              <TableHead className="font-semibold">{m.colStatus}</TableHead>
+              <TableHead className="font-semibold">{m.colJoined}</TableHead>
+              <TableHead className="text-right font-semibold">{m.colActions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -228,11 +266,11 @@ export function MembersClient() {
             ) : members.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
-                  No members found. Add your first member to get started.
+                  {m.noMembers}
                 </TableCell>
               </TableRow>
             ) : (
-              members.map((member, i) => (
+              members.map((member) => (
                 <TableRow key={member.id} className="group hover:bg-muted/30 transition-colors">
                   <TableCell className="font-medium font-mono text-primary/80">
                     {member.memberId}
@@ -258,7 +296,7 @@ export function MembersClient() {
                   <TableCell>
                     <div className="flex flex-col text-sm">
                       <span className="text-foreground font-medium">{member.familyDetails?.familyName || '-'}</span>
-                      <span className="text-muted-foreground text-xs">{member.familyDetails?.businessName ? `${member.familyDetails.businessName} • ${member.familyDetails.familyId}` : member.familyDetails?.familyId || '-'} • {member.familyDetails?.currentCity || member.currentCity || '-'}</span>
+                      <span className="text-muted-foreground text-xs">{member.familyDetails?.businessName ? `${member.familyDetails.businessName} • ${member.familyDetails.familyId}` : member.familyDetails?.familyId || '-'} • {member.familyDetails?.currentCity || '-'}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -271,30 +309,29 @@ export function MembersClient() {
                     {formatDate(member.createdAt)}
                   </TableCell>
                   <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger render={<Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity" />}>
-                        <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-[160px] bg-card border-border shadow-xl">
-                        <DropdownMenuGroup>
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem className="cursor-pointer" onClick={() => handleViewMember(member)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer text-primary" onClick={() => handleEditMember(member)}>
-                            <FileEdit className="mr-2 h-4 w-4" />
-                            Edit Profile
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive" onClick={() => handleDeleteMember(member.id)}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuGroup>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        title="View Details"
+                        onClick={() => handleViewMember(member)}
+                        className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      <button
+                        title="Edit Profile"
+                        onClick={() => handleEditMember(member)}
+                        className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        <FileEdit className="h-4 w-4" />
+                      </button>
+                      <button
+                        title="Delete Member"
+                        onClick={() => handleDeleteMember(member.id)}
+                        className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -306,11 +343,32 @@ export function MembersClient() {
       {/* Pagination Footer */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          Showing <span className="font-semibold text-foreground">{members.length}</span> members
+          {m.showing}{" "}
+          <span className="font-semibold text-foreground">
+            {total === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, total)}
+          </span>{" "}
+          of <span className="font-semibold text-foreground">{total}</span> {m.membersLabel}
         </p>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" disabled>Previous</Button>
-          <Button variant="outline" size="sm" disabled>Next</Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage <= 1 || isLoading}
+            onClick={() => handlePageChange(currentPage - 1)}
+          >
+            {m.previous}
+          </Button>
+          <span className="text-sm text-muted-foreground px-1">
+            {currentPage} / {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage >= totalPages || isLoading}
+            onClick={() => handlePageChange(currentPage + 1)}
+          >
+            {m.next}
+          </Button>
         </div>
       </div>
     </div>

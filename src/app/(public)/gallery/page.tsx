@@ -1,27 +1,33 @@
-import { prisma } from "@/lib/prisma"
+"use client"
+
+import { useEffect, useState } from "react"
 import { FloatingOrbs } from "@/components/shared/floating-orbs"
 import { SectionHeader } from "@/components/shared/section-header"
 import { GalleryGrid } from "./gallery-grid"
+import { useLanguage } from "@/lib/language-context"
 
-export const revalidate = 60 // Revalidate every 60 seconds
+type ImageItem = {
+  id: string
+  imageUrl: string
+  caption: string | null
+  eventId: string | null
+  createdAt: string
+  event?: { id: string; name: string } | null
+}
 
-export default async function PublicGalleryPage() {
-  // Fetch gallery images and events
-  const images = await prisma.galleryImage.findMany({
-    orderBy: {
-      createdAt: "desc"
-    },
-    include: {
-      event: {
-        select: {
-          id: true,
-          name: true
-        }
-      }
-    }
-  })
+export default function PublicGalleryPage() {
+  const [images, setImages] = useState<ImageItem[]>([])
+  const { t } = useLanguage()
 
-  // Get unique events list for filters
+  useEffect(() => {
+    fetch("/api/gallery")
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) setImages(data.data)
+      })
+      .catch(() => {})
+  }, [])
+
   const events = Array.from(
     new Map(
       images
@@ -35,17 +41,15 @@ export default async function PublicGalleryPage() {
       <FloatingOrbs variant="mixed" className="opacity-15" />
 
       <div className="max-w-7xl mx-auto space-y-12 relative z-10">
-        
-        {/* Header */}
+
         <SectionHeader
-          overline="Captured Moments"
-          title="Community Gallery"
+          overline={t.gallery.overline}
+          title={t.gallery.title}
           gujaratiSubtitle="યાદગાર પળો અને તસવીરો"
-          description="Explore the rich, colorful, and joyful highlights of our community celebrations, social service camps, and gatherings."
+          description={t.gallery.description}
           centered
         />
 
-        {/* Client Gallery Grid with Lightbox */}
         <GalleryGrid initialImages={images} eventsList={events} />
 
       </div>

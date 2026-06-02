@@ -10,11 +10,13 @@ import { GlassCard } from "@/components/shared/glass-card"
 import { FloatingOrbs } from "@/components/shared/floating-orbs"
 import { SectionHeader } from "@/components/shared/section-header"
 import { Button } from "@/components/ui/button"
+import { useLanguage } from "@/lib/language-context"
 
 export default function ContactPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [errorMsg, setErrorMsg] = useState("")
+  const { t } = useLanguage()
 
   const {
     register,
@@ -23,12 +25,7 @@ export default function ContactPage() {
     formState: { errors },
   } = useForm<ContactFormInput>({
     resolver: zodResolver(contactFormSchema),
-    defaultValues: {
-      name: "",
-      phone: "",
-      email: "",
-      message: "",
-    },
+    defaultValues: { name: "", phone: "", email: "", message: "" },
   })
 
   const onSubmit = async (data: ContactFormInput) => {
@@ -40,7 +37,6 @@ export default function ContactPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
-
       const resData = await response.json()
       if (response.ok && resData.success) {
         setSubmitSuccess(true)
@@ -48,7 +44,7 @@ export default function ContactPage() {
       } else {
         setErrorMsg(resData.message || "Something went wrong. Please try again.")
       }
-    } catch (error) {
+    } catch {
       setErrorMsg("Failed to submit form. Please check your network connection.")
     } finally {
       setIsSubmitting(false)
@@ -60,35 +56,43 @@ export default function ContactPage() {
       <FloatingOrbs variant="mixed" className="opacity-15" />
 
       <div className="max-w-6xl mx-auto space-y-12 relative z-10">
-        
-        {/* Header */}
+
         <SectionHeader
-          overline="Get In Touch"
-          title="Contact Community Desk"
+          overline={t.contact.overline}
+          title={t.contact.title}
           gujaratiSubtitle="સંપર્ક કાર્યાલય"
-          description="Have questions, suggestions, or want to register as a new family? Send us a message or reach out through our helpline."
+          description={t.contact.description}
           centered
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
+
           {/* Contact Details Panel */}
           <div className="lg:col-span-5 space-y-6">
             <GlassCard variant="gold" className="p-8 space-y-8">
-              <h3 className="text-2xl font-bold font-heading text-foreground">Office Address</h3>
-              
+              <h3 className="text-2xl font-bold font-heading text-foreground">{t.contact.officeAddress}</h3>
+
               <div className="space-y-6">
                 <div className="flex gap-4">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20 shrink-0">
                     <MapPin className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-foreground text-sm">Mandal Office</h4>
+                    <h4 className="font-bold text-foreground text-sm">{t.contact.mandalOffice}</h4>
                     <p className="text-muted-foreground text-sm mt-1 leading-relaxed">
-                      Plot No. 124-125, G.I.D.C. Industrial Estate,<br />
-                      Opposite Pandesara Police Station, Pandesara,<br />
-                      Surat, Gujarat - 394221
+                      Udhana Main Rd, near BAPS Swaminarayan Mandir,<br />
+                      Udhana GIDC, Citi Industrial Estate,<br />
+                      Udhna, Surat, Gujarat - 394210
                     </p>
+                    <a
+                      href="https://maps.google.com/maps?q=Shree+Kutch+Kadva+Patidar+Wadi,+Udhana+Main+Rd,+near+BAPS+Swaminarayan+Mandir,+Udhana+GIDC,+Citi+Industrial+Estate,+Udhna,+Surat,+Gujarat+394210"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 mt-2 text-xs font-bold text-primary hover:underline"
+                    >
+                      <MapPin className="w-3 h-3" />
+                      Get Directions →
+                    </a>
                   </div>
                 </div>
 
@@ -97,10 +101,10 @@ export default function ContactPage() {
                     <Phone className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-foreground text-sm">Helpline Numbers</h4>
+                    <h4 className="font-bold text-foreground text-sm">{t.contact.helplineNumbers}</h4>
                     <p className="text-muted-foreground text-sm mt-1">
-                      +91 98765 43210 (Office Desk)<br />
-                      +91 94281 12345 (Secretary Office)
+                      +91 9898623611 (Office Desk)<br />
+                      +91 9898623611 (Secretary Office)
                     </p>
                   </div>
                 </div>
@@ -110,7 +114,7 @@ export default function ContactPage() {
                     <Mail className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-foreground text-sm">Email Address</h4>
+                    <h4 className="font-bold text-foreground text-sm">{t.contact.emailAddress}</h4>
                     <p className="text-muted-foreground text-sm mt-1 hover:text-primary transition-colors">
                       <a href="mailto:info@skppmm.org">info@skppmm.org</a>
                     </p>
@@ -122,10 +126,10 @@ export default function ContactPage() {
                     <Clock className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-foreground text-sm">Visiting Hours</h4>
+                    <h4 className="font-bold text-foreground text-sm">{t.contact.visitingHours}</h4>
                     <p className="text-muted-foreground text-sm mt-1">
-                      Sunday: 9:00 AM - 12:30 PM<br />
-                      Mon - Sat: Closed (Call Helpline)
+                      {t.contact.visitingTime}<br />
+                      {t.contact.visitingTimeSub}
                     </p>
                   </div>
                 </div>
@@ -133,10 +137,10 @@ export default function ContactPage() {
 
               <div className="border-t border-white/10 pt-6">
                 <span className="text-xs font-semibold text-primary tracking-widest uppercase block mb-1">
-                  Connect Online
+                  {t.contact.connectOnline}
                 </span>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Join our official WhatsApp group for faster alerts. Send a copy of your Member ID to our Helpline.
+                  {t.contact.whatsappNote}
                 </p>
               </div>
             </GlassCard>
@@ -154,21 +158,21 @@ export default function ContactPage() {
                   <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center">
                     <CheckCircle2 className="w-8 h-8" />
                   </div>
-                  <h3 className="text-2xl font-bold font-heading text-foreground">Message Sent!</h3>
+                  <h3 className="text-2xl font-bold font-heading text-foreground">{t.contact.successTitle}</h3>
                   <p className="text-muted-foreground text-sm max-w-sm">
-                    Thank you for contacting us. Our community desk officer will get back to you shortly.
+                    {t.contact.successDesc}
                   </p>
-                  <Button 
+                  <Button
                     onClick={() => setSubmitSuccess(false)}
                     variant="outline"
                     className="mt-6"
                   >
-                    Send Another Message
+                    {t.contact.sendAnother}
                   </Button>
                 </motion.div>
               ) : (
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                  <h3 className="text-2xl font-bold font-heading text-foreground mb-4">Send a Message</h3>
+                  <h3 className="text-2xl font-bold font-heading text-foreground mb-4">{t.contact.sendMessage}</h3>
 
                   {errorMsg && (
                     <div className="p-4 text-sm font-semibold text-destructive bg-destructive/10 border border-destructive/20 rounded-xl text-center">
@@ -178,7 +182,7 @@ export default function ContactPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-foreground ml-1">Your Full Name</label>
+                      <label className="text-xs font-bold text-foreground ml-1">{t.contact.yourName}</label>
                       <input
                         type="text"
                         {...register("name")}
@@ -191,7 +195,7 @@ export default function ContactPage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-foreground ml-1">Mobile Number</label>
+                      <label className="text-xs font-bold text-foreground ml-1">{t.contact.mobileNumber}</label>
                       <input
                         type="tel"
                         {...register("phone")}
@@ -205,7 +209,7 @@ export default function ContactPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground ml-1">Email Address (Optional)</label>
+                    <label className="text-xs font-bold text-foreground ml-1">{t.contact.emailOptional}</label>
                     <input
                       type="email"
                       {...register("email")}
@@ -218,11 +222,11 @@ export default function ContactPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-foreground ml-1">Message Description</label>
+                    <label className="text-xs font-bold text-foreground ml-1">{t.contact.messageDesc}</label>
                     <textarea
                       rows={5}
                       {...register("message")}
-                      placeholder="Write your details, queries, or family registration requests here..."
+                      placeholder={t.contact.messagePlaceholder}
                       className="w-full px-4 py-3 bg-background/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm text-foreground resize-none"
                     />
                     {errors.message && (
@@ -239,7 +243,7 @@ export default function ContactPage() {
                       <Loader2 className="w-5 h-5 animate-spin" />
                     ) : (
                       <>
-                        Send Message
+                        {t.contact.submit}
                         <Send className="w-4 h-4 ml-2" />
                       </>
                     )}
@@ -249,6 +253,20 @@ export default function ContactPage() {
             </GlassCard>
           </div>
 
+        </div>
+
+        {/* Google Maps Embed */}
+        <div className="rounded-2xl overflow-hidden border border-border shadow-lg">
+          <iframe
+            title="Shree Kutch Kadva Patidar Wadi Location"
+            src="https://maps.google.com/maps?q=Shree+Kutch+Kadva+Patidar+Wadi,+Udhana+Main+Rd,+near+BAPS+Swaminarayan+Mandir,+Udhana+GIDC,+Citi+Industrial+Estate,+Udhna,+Surat,+Gujarat+394210&output=embed&z=16"
+            width="100%"
+            height="400"
+            style={{ border: 0, display: "block" }}
+            allowFullScreen
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
         </div>
 
       </div>

@@ -108,6 +108,7 @@ model Member {
   familyId          String
   family            Family         @relation(fields: [familyId], references: [id], onDelete: Cascade)
   firstName         String?
+  middleName        String?
   surname           String?
   fullName          String?         @map("fullName")
   dob               DateTime?

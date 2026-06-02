@@ -64,7 +64,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       data: {
         firstName: body.firstName,
         surname: body.surname,
-        fullName: `${body.firstName} ${body.surname}`,
+        fullName: `${body.firstName} ${body.middleName} ${body.surname}`,
         gender: body.gender,
         dob: body.dob ? new Date(body.dob) : null,
         phone: body.phone || null,
@@ -79,7 +79,14 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       include: { family: true },
     })
 
-    return NextResponse.json({ data: member })
+    // Save middleName via raw SQL (bypasses Prisma client validation until next full regeneration)
+    await prisma.$executeRawUnsafe(
+      `UPDATE members SET "middleName" = $1 WHERE id = $2`,
+      body.middleName || null,
+      params.id
+    )
+
+    return NextResponse.json({ data: { ...member, middleName: body.middleName || null } })
   } catch (error) {
     console.error("Error updating member:", error)
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })

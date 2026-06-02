@@ -18,6 +18,7 @@ import {
 import { NoticeFormDialog } from "./notice-form-dialog"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { formatDate } from "@/lib/utils"
+import { useLanguage } from "@/lib/language-context"
 
 type NoticeItem = {
   id: string
@@ -33,6 +34,8 @@ export function NoticesClient() {
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const { t } = useLanguage()
+  const n = t.admin.notices
 
   useEffect(() => {
     fetchNotices()
@@ -52,7 +55,7 @@ export function NoticesClient() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this notice? This cannot be undone.")) return
+    if (!confirm(n.confirmDelete)) return
     try {
       const res = await fetch(`/api/notices/${id}`, { method: "DELETE" })
       if (res.ok) {
@@ -97,7 +100,7 @@ export function NoticesClient() {
           <div className="relative w-full sm:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search notices by title..."
+              placeholder={n.searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 bg-background/50 border-border/50 focus:border-primary"
@@ -110,7 +113,7 @@ export function NoticesClient() {
             className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20"
           >
             <Plus className="mr-2 h-4 w-4" />
-            Add Announcement
+            {n.addNotice}
           </Button>
         </div>
       </div>
@@ -120,12 +123,12 @@ export function NoticesClient() {
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="font-semibold">Notice Title</TableHead>
-              <TableHead className="font-semibold">Published</TableHead>
-              <TableHead className="font-semibold">Expiry Date</TableHead>
-              <TableHead className="font-semibold">Priority</TableHead>
-              <TableHead className="font-semibold">Visibility</TableHead>
-              <TableHead className="text-right font-semibold">Actions</TableHead>
+              <TableHead className="font-semibold">{n.colTitle}</TableHead>
+              <TableHead className="font-semibold">{n.colCreated}</TableHead>
+              <TableHead className="font-semibold">{n.colExpiry}</TableHead>
+              <TableHead className="font-semibold">{n.colPriority}</TableHead>
+              <TableHead className="font-semibold">{n.colVisible}</TableHead>
+              <TableHead className="text-right font-semibold">{n.colActions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -143,7 +146,7 @@ export function NoticesClient() {
             ) : filteredNotices.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                  No notices found. Publish your first announcement above.
+                  {n.noNotices}
                 </TableCell>
               </TableRow>
             ) : (

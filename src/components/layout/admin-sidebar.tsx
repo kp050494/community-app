@@ -7,22 +7,10 @@ import { signOut } from "next-auth/react"
 import {
   LayoutDashboard, Users, Home, Calendar,
   Bell, CreditCard, BarChart3, Image as ImageIcon,
-  MessageSquare, Settings, LogOut, PanelLeftClose, PanelLeftOpen
+  MessageSquare, Settings, LogOut, GitBranch
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-const NAV_ITEMS = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/admin/dashboard" },
-  { icon: Home, label: "Families", href: "/admin/families" },
-  { icon: Users, label: "Members", href: "/admin/members" },
-  { icon: Calendar, label: "Events", href: "/admin/events" },
-  { icon: Bell, label: "Notices", href: "/admin/notices" },
-  { icon: CreditCard, label: "Payments", href: "/admin/payments" },
-  { icon: BarChart3, label: "Reports", href: "/admin/reports" },
-  { icon: ImageIcon, label: "Gallery", href: "/admin/gallery" },
-  { icon: MessageSquare, label: "Messages", href: "/admin/messages" },
-  { icon: Settings, label: "Settings", href: "/admin/settings" },
-]
+import { useLanguage } from "@/lib/language-context"
 
 interface AdminSidebarProps {
   collapsed: boolean
@@ -30,11 +18,26 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ collapsed }: AdminSidebarProps) {
   const pathname = usePathname()
+  const { t } = useLanguage()
+
+  const NAV_ITEMS = [
+    { icon: LayoutDashboard, label: t.admin.nav.dashboard, href: "/admin/dashboard" },
+    { icon: Home, label: t.admin.nav.families, href: "/admin/families" },
+    { icon: Users, label: t.admin.nav.members, href: "/admin/members" },
+    { icon: GitBranch, label: t.admin.nav.familyTree, href: "/admin/family-tree" },
+    { icon: Calendar, label: t.admin.nav.events, href: "/admin/events" },
+    { icon: Bell, label: t.admin.nav.notices, href: "/admin/notices" },
+    { icon: CreditCard, label: t.admin.nav.payments, href: "/admin/payments" },
+    { icon: BarChart3, label: t.admin.nav.reports, href: "/admin/reports" },
+    { icon: ImageIcon, label: t.admin.nav.gallery, href: "/admin/gallery" },
+    { icon: MessageSquare, label: t.admin.nav.messages, href: "/admin/messages" },
+    { icon: Settings, label: t.admin.nav.settings, href: "/admin/settings" },
+  ]
 
   return (
     <motion.aside
       initial={false}
-      animate={{ 
+      animate={{
         width: collapsed ? 80 : 280,
         opacity: 1
       }}
@@ -51,10 +54,10 @@ export function AdminSidebar({ collapsed }: AdminSidebarProps) {
             <img src="/logo.png" alt="SKPPMM" width={60} height={60} className="object-contain shrink-0" />
             <div className="flex flex-col">
               <span className="font-heading text-sm font-bold tracking-tight text-foreground leading-tight">
-                SKPPMM
+                શ્રી ક.ક.પા. પાંડેેસરા મિત્ર મંડળ
               </span>
               <span className="text-[0.6rem] font-medium tracking-widest text-muted-foreground uppercase">
-                Admin Portal
+                {t.admin.nav.adminPortal}
               </span>
             </div>
           </div>
@@ -67,12 +70,12 @@ export function AdminSidebar({ collapsed }: AdminSidebarProps) {
           const isActive = pathname.startsWith(item.href)
           return (
             <Link
-              key={item.label}
+              key={item.href}
               href={item.href}
               className={cn(
                 "flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group relative",
-                isActive 
-                  ? "bg-primary/10 text-primary font-semibold" 
+                isActive
+                  ? "bg-primary/10 text-primary font-semibold"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
@@ -80,12 +83,11 @@ export function AdminSidebar({ collapsed }: AdminSidebarProps) {
                 "w-5 h-5 shrink-0 transition-colors",
                 isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
               )} />
-              
+
               {!collapsed && (
                 <span className="truncate">{item.label}</span>
               )}
 
-              {/* Active Indicator Line */}
               {isActive && !collapsed && (
                 <motion.div
                   layoutId="sidebar-active"
@@ -93,7 +95,6 @@ export function AdminSidebar({ collapsed }: AdminSidebarProps) {
                 />
               )}
 
-              {/* Tooltip for Collapsed State */}
               {collapsed && (
                 <div className="absolute left-full ml-4 px-3 py-1.5 bg-foreground text-background text-xs font-medium rounded-lg opacity-0 -translate-x-2 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 transition-all z-50 whitespace-nowrap">
                   {item.label}
@@ -104,7 +105,7 @@ export function AdminSidebar({ collapsed }: AdminSidebarProps) {
         })}
       </div>
 
-      {/* User Info & Logout */}
+      {/* Sign Out */}
       <div className="p-4 border-t border-border">
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
@@ -114,7 +115,7 @@ export function AdminSidebar({ collapsed }: AdminSidebarProps) {
           )}
         >
           <LogOut className="w-5 h-5 shrink-0" />
-          {!collapsed && <span className="font-medium">Sign Out</span>}
+          {!collapsed && <span className="font-medium">{t.admin.nav.signOut}</span>}
         </button>
       </div>
     </motion.aside>

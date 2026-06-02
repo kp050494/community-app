@@ -1,26 +1,40 @@
-import { prisma } from "@/lib/prisma"
+"use client"
+
+import { useEffect, useState } from "react"
 import { Calendar, MapPin, Clock, IndianRupee } from "lucide-react"
 import { GlassCard } from "@/components/shared/glass-card"
 import { FloatingOrbs } from "@/components/shared/floating-orbs"
 import { SectionHeader } from "@/components/shared/section-header"
 import { StatusBadge } from "@/components/shared/status-badge"
+import { useLanguage } from "@/lib/language-context"
 import Link from "next/link"
 
-export const revalidate = 60 // Revalidate every 60 seconds
+type Event = {
+  id: string
+  name: string
+  description: string | null
+  date: string
+  time: string | null
+  venue: string | null
+  bannerUrl: string | null
+  isFeeRequired: boolean
+  feeAmount: number | null
+  status: string
+}
 
-export default async function PublicEventsPage() {
-  const events = await prisma.event.findMany({
-    where: {
-      status: {
-        in: ["UPCOMING", "ONGOING", "COMPLETED"],
-      },
-    },
-    orderBy: {
-      date: "desc",
-    },
-  })
+export default function PublicEventsPage() {
+  const [events, setEvents] = useState<Event[]>([])
+  const { t } = useLanguage()
 
-  // Group events
+  useEffect(() => {
+    fetch("/api/events?status=UPCOMING&status=ONGOING&status=COMPLETED")
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) setEvents(data.data)
+      })
+      .catch(() => {})
+  }, [])
+
   const now = new Date()
   const upcomingEvents = events.filter(e => new Date(e.date) >= now && e.status !== "COMPLETED")
   const pastEvents = events.filter(e => new Date(e.date) < now || e.status === "COMPLETED")
@@ -30,26 +44,25 @@ export default async function PublicEventsPage() {
       <FloatingOrbs variant="mixed" className="opacity-15" />
 
       <div className="max-w-7xl mx-auto space-y-16 relative z-10">
-        
-        {/* Header */}
+
         <SectionHeader
-          overline="Community Gatherings"
-          title="Events & Celebrations"
+          overline={t.events.overline}
+          title={t.events.title}
           gujaratiSubtitle="સાંસ્કૃતિક ઉત્સવો અને કાર્યક્રમો"
-          description="Join us in celebrating our culture, sharing knowledge, and building strong bonds through our seasonal festivals, business meets, and youth camps."
+          description={t.events.description}
           centered
         />
 
-        {/* Upcoming Events Section */}
+        {/* Upcoming Events */}
         <div className="space-y-8">
           <div className="flex items-center gap-3 border-b border-primary/20 pb-4">
-            <h2 className="text-2xl font-bold font-heading text-foreground">Upcoming Events</h2>
+            <h2 className="text-2xl font-bold font-heading text-foreground">{t.events.upcoming}</h2>
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
           </div>
 
           {upcomingEvents.length === 0 ? (
             <GlassCard className="p-8 text-center text-muted-foreground">
-              No upcoming events scheduled right now. Check back soon!
+              {t.events.noUpcoming}
             </GlassCard>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -58,9 +71,9 @@ export default async function PublicEventsPage() {
                   <div className="h-48 overflow-hidden relative bg-muted">
                     {event.bannerUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img 
-                        src={event.bannerUrl} 
-                        alt={event.name} 
+                      <img
+                        src={event.bannerUrl}
+                        alt={event.name}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
@@ -78,12 +91,9 @@ export default async function PublicEventsPage() {
                         {event.name}
                       </h3>
                       {event.description && (
-                        <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                          {event.description}
-                        </p>
+                        <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{event.description}</p>
                       )}
                     </div>
-
                     <div className="space-y-2 pt-2 border-t border-white/5 text-sm text-muted-foreground">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-primary" />
@@ -102,23 +112,22 @@ export default async function PublicEventsPage() {
                         </div>
                       )}
                     </div>
-
                     <div className="flex items-center justify-between pt-4 border-t border-white/10 mt-auto">
                       <span className="text-sm font-semibold flex items-center text-foreground">
                         {event.isFeeRequired ? (
                           <>
                             <IndianRupee className="w-3.5 h-3.5 mr-0.5 text-primary" />
-                            {event.feeAmount} / person
+                            {event.feeAmount}{t.events.perPerson}
                           </>
                         ) : (
-                          <span className="text-emerald-500">Free Entry</span>
+                          <span className="text-emerald-500">{t.events.freeEntry}</span>
                         )}
                       </span>
-                      <Link 
+                      <Link
                         href={`/events/${event.id}`}
                         className="text-xs font-bold text-primary hover:text-primary-foreground bg-primary/10 hover:bg-primary px-3 py-2 rounded-lg transition-colors border border-primary/20"
                       >
-                        View Details →
+                        {t.events.viewDetails}
                       </Link>
                     </div>
                   </div>
@@ -128,15 +137,15 @@ export default async function PublicEventsPage() {
           )}
         </div>
 
-        {/* Past Events Section */}
+        {/* Past Events */}
         <div className="space-y-8 pt-8">
           <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-            <h2 className="text-2xl font-bold font-heading text-foreground">Past Memories</h2>
+            <h2 className="text-2xl font-bold font-heading text-foreground">{t.events.pastMemories}</h2>
           </div>
 
           {pastEvents.length === 0 ? (
             <GlassCard className="p-8 text-center text-muted-foreground">
-              No past events recorded yet.
+              {t.events.noPast}
             </GlassCard>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -145,9 +154,9 @@ export default async function PublicEventsPage() {
                   <div className="h-44 overflow-hidden relative bg-muted grayscale group-hover:grayscale-0 transition-all duration-500">
                     {event.bannerUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img 
-                        src={event.bannerUrl} 
-                        alt={event.name} 
+                      <img
+                        src={event.bannerUrl}
+                        alt={event.name}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
@@ -158,16 +167,11 @@ export default async function PublicEventsPage() {
                   </div>
                   <div className="p-6 flex flex-col flex-1 justify-between space-y-4">
                     <div>
-                      <h3 className="text-lg font-bold font-heading text-foreground">
-                        {event.name}
-                      </h3>
+                      <h3 className="text-lg font-bold font-heading text-foreground">{event.name}</h3>
                       {event.description && (
-                        <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-                          {event.description}
-                        </p>
+                        <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{event.description}</p>
                       )}
                     </div>
-
                     <div className="space-y-1.5 pt-2 border-t border-white/5 text-xs text-muted-foreground">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-3.5 h-3.5 text-primary" />
@@ -180,13 +184,12 @@ export default async function PublicEventsPage() {
                         </div>
                       )}
                     </div>
-
                     <div className="flex items-center justify-end pt-3 border-t border-white/10 mt-auto">
-                      <Link 
+                      <Link
                         href={`/events/${event.id}`}
                         className="text-xs font-bold text-muted-foreground hover:text-foreground hover:underline transition-all"
                       >
-                        See Photos & details →
+                        {t.events.seePhotos}
                       </Link>
                     </div>
                   </div>

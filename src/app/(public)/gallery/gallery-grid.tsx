@@ -4,6 +4,7 @@ import { useState } from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { X, ChevronLeft, ChevronRight, Eye, Calendar } from "lucide-react"
 import { GlassCard } from "@/components/shared/glass-card"
+import { useLanguage } from "@/lib/language-context"
 
 type ImageItem = {
   id: string
@@ -25,6 +26,7 @@ interface GalleryGridProps {
 export function GalleryGrid({ initialImages, eventsList }: GalleryGridProps) {
   const [selectedEventId, setSelectedEventId] = useState<string>("all")
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const { t } = useLanguage()
 
   // Filter images
   const filteredImages = selectedEventId === "all"
@@ -57,7 +59,7 @@ export function GalleryGrid({ initialImages, eventsList }: GalleryGridProps) {
               : "bg-card/40 border-white/10 text-muted-foreground hover:text-foreground hover:bg-card"
           }`}
         >
-          All Photos
+          {t.gallery.allPhotos}
         </button>
         {eventsList.map((event) => (
           <button
@@ -83,7 +85,7 @@ export function GalleryGrid({ initialImages, eventsList }: GalleryGridProps) {
             exit={{ opacity: 0 }}
             className="text-center py-20 text-muted-foreground"
           >
-            No photos uploaded in this category yet.
+            {t.gallery.noPhotos}
           </motion.div>
         ) : (
           <motion.div
@@ -117,7 +119,7 @@ export function GalleryGrid({ initialImages, eventsList }: GalleryGridProps) {
                     </span>
                   </div>
                   <div>
-                    <p className="text-sm font-bold line-clamp-2">{image.caption || "Mitra Mandal Gathering"}</p>
+                    <p className="text-sm font-bold line-clamp-2">{image.caption || t.gallery.gathering}</p>
                     {image.event && (
                       <span className="inline-flex items-center gap-1 text-[10px] text-primary font-semibold mt-1 bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">
                         <Calendar className="w-2.5 h-2.5" />
@@ -171,7 +173,7 @@ export function GalleryGrid({ initialImages, eventsList }: GalleryGridProps) {
               {/* Lightbox Footer Caption */}
               <div className="text-center text-white space-y-1 max-w-xl">
                 <p className="text-lg font-bold">
-                  {filteredImages[lightboxIndex].caption || "Mitra Mandal Gathering"}
+                  {filteredImages[lightboxIndex].caption || t.gallery.gathering}
                 </p>
                 {filteredImages[lightboxIndex].event && (
                   <span className="inline-flex items-center gap-1.5 text-xs text-primary font-semibold bg-primary/10 border border-primary/20 px-3 py-1 rounded-full">
