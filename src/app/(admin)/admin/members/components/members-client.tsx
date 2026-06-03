@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { motion } from "motion/react"
 import {
   Search, Plus, Filter,
-  FileEdit, Trash2, Eye, Download,
+  FileEdit, Trash2, Eye, Download, Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -59,6 +59,7 @@ export function MembersClient() {
   const [memberDialogData, setMemberDialogData] = useState<Member | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [detailsMember, setDetailsMember] = useState<Member | null>(null)
+  const [isExporting, setIsExporting] = useState(false)
   const { t } = useLanguage()
   const m = t.admin.members
 
@@ -109,45 +110,59 @@ export function MembersClient() {
     setDetailsOpen(true)
   }
 
-  const handleExportCSV = () => {
-    const headers = [
-      "Member ID", "First Name", "Surname", "Gender", "Date of Birth", "Age",
-      "Blood Group", "Phone", "Email", "Address", "Education", "Occupation / Role",
-      "Family ID", "Family Name", "Business Name", "Kutch Vatan", "Current City", "Status", "Joined Date"
-    ]
-    const toCSV = (val: any) => `"${String(val ?? "").replace(/"/g, '""')}"`
-    const rows = members.map(m => {
-      const age = m.dob ? Math.floor((Date.now() - new Date(m.dob).getTime()) / (365.25 * 24 * 3600 * 1000)) : ""
-      return [
-        m.memberId,
-        m.firstName || "",
-        m.surname || "",
-        m.gender || "",
-        m.dob ? new Date(m.dob).toLocaleDateString("en-IN") : "",
-        age,
-        m.bloodGroup || "",
-        m.phone || "",
-        m.email || "",
-        m.address || "",
-        m.education || "",
-        m.occupationRole || "",
-        m.familyDetails?.familyId || "",
-        m.familyDetails?.familyName || "",
-        m.familyDetails?.businessName || "",
-        m.familyDetails?.kutchVatan || "",
-        m.familyDetails?.currentCity || "",
-        m.isActive ? "Active" : "Inactive",
-        new Date(m.createdAt).toLocaleDateString("en-IN"),
-      ].map(toCSV).join(",")
-    })
-    const csv = [headers.map(toCSV).join(","), ...rows].join("\n")
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `members-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+  const handleExportCSV = async () => {
+    setIsExporting(true)
+    try {
+      // Fetch ALL members (not just current page)
+      const res = await fetch("/api/members?limit=100000")
+      const data = await res.json()
+      const allMembers: Member[] = data.data || []
+
+      const headers = [
+        "Member ID", "First Name", "Surname", "Gender", "Date of Birth", "Age",
+        "Blood Group", "Phone", "Email", "Address", "Education", "Occupation / Role",
+        "Family ID", "Family Name", "Business Name", "Kutch Vatan", "Current City", "Status", "Joined Date"
+      ]
+      const toCSV = (val: any) => `"${String(val ?? "").replace(/"/g, '""')}"`
+      const rows = allMembers.map(mbr => {
+        const age = mbr.dob ? Math.floor((Date.now() - new Date(mbr.dob).getTime()) / (365.25 * 24 * 3600 * 1000)) : ""
+        return [
+          mbr.memberId,
+          mbr.firstName || "",
+          mbr.surname || "",
+          mbr.gender || "",
+          mbr.dob ? new Date(mbr.dob).toLocaleDateString("en-IN") : "",
+          age,
+          mbr.bloodGroup || "",
+          mbr.phone || "",
+          mbr.email || "",
+          mbr.address || "",
+          mbr.education || "",
+          mbr.occupationRole || "",
+          mbr.familyDetails?.familyId || "",
+          mbr.familyDetails?.familyName || "",
+          mbr.familyDetails?.businessName || "",
+          mbr.familyDetails?.kutchVatan || "",
+          mbr.familyDetails?.currentCity || "",
+          mbr.isActive ? "Active" : "Inactive",
+          new Date(mbr.createdAt).toLocaleDateString("en-IN"),
+        ].map(toCSV).join(",")
+      })
+      const csv = [
+        [`"Total Members: ${allMembers.length}"`], [],
+        headers.map(toCSV).join(","),
+        ...rows
+      ].map(r => (Array.isArray(r) ? r.join(",") : r)).join("\n")
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `all-members-${new Date().toISOString().slice(0, 10)}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   const handleDeleteMember = async (id: string) => {
@@ -221,9 +236,9 @@ export function MembersClient() {
           </Button>
         </div>
         <div className="flex items-center space-x-2 w-full sm:w-auto">
-          <Button variant="outline" className="w-full sm:w-auto bg-background/50" onClick={handleExportCSV}>
-            <Download className="mr-2 h-4 w-4" />
-            {m.exportCsv}
+          <Button variant="outline" className="w-full sm:w-auto bg-background/50" onClick={handleExportCSV} disabled={isExporting}>
+            {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+            {isExporting ? "Exporting..." : m.exportCsv}
           </Button>
           <Button
             onClick={handleCreateMember}

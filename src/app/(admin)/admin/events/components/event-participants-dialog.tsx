@@ -15,6 +15,11 @@ import {
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+function calcAge(dob: string | Date | null): number | null {
+  if (!dob) return null
+  return Math.floor((Date.now() - new Date(dob).getTime()) / (365.25 * 24 * 3600 * 1000))
+}
+
 type Participant = {
   id: string
   amountDue: number
@@ -29,6 +34,7 @@ type Participant = {
     surname: string | null
     phone: string | null
     gender: string
+    dob: string | null
   }
 }
 
@@ -39,6 +45,7 @@ type MemberOption = {
   firstName: string | null
   surname: string | null
   phone: string | null
+  dob: string | null
   familyDetails?: {
     id: string
     familyId: string
@@ -218,9 +225,10 @@ export function EventParticipantsDialog({
 
   const handleDownloadCSV = () => {
     if (!event) return
-    const headers = ["Member ID", "Full Name", "Phone", "Gender", "Amount Due (₹)", "Amount Paid (₹)", "Pending (₹)", "Status"]
+    const headers = ["Member ID", "Full Name", "Phone", "Gender", "Age", "Amount Due (₹)", "Amount Paid (₹)", "Pending (₹)", "Status"]
     const rows = participants.map((p) => [
       p.member.memberId, displayName(p.member), p.member.phone || "", p.member.gender,
+      calcAge(p.member.dob) ?? "",
       p.amountDue, p.amountPaid, p.pendingAmount, p.status,
     ])
     const meta = [
@@ -295,6 +303,7 @@ export function EventParticipantsDialog({
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="text-xs font-semibold">Member</TableHead>
                   <TableHead className="text-xs font-semibold">Phone</TableHead>
+                  <TableHead className="text-xs font-semibold">Age</TableHead>
                   <TableHead className="text-xs font-semibold">Family</TableHead>
                   <TableHead className="text-xs font-semibold">Due (₹)</TableHead>
                   <TableHead className="text-xs font-semibold">Paid (₹)</TableHead>
@@ -306,14 +315,14 @@ export function EventParticipantsDialog({
                 {isLoading ? (
                   Array.from({ length: 4 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 7 }).map((_, j) => (
+                      {Array.from({ length: 8 }).map((_, j) => (
                         <TableCell key={j}><div className="h-4 w-16 bg-muted animate-pulse rounded" /></TableCell>
                       ))}
                     </TableRow>
                   ))
                 ) : participants.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-32 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={8} className="h-32 text-center text-sm text-muted-foreground">
                       No participants yet. Use the &quot;Add by Family&quot; tab to add members.
                     </TableCell>
                   </TableRow>
@@ -327,6 +336,9 @@ export function EventParticipantsDialog({
                           <p className="text-xs text-muted-foreground font-mono">{p.member.memberId}</p>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">{p.member.phone || "—"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {calcAge(p.member.dob) !== null ? `${calcAge(p.member.dob)} yrs` : "—"}
+                        </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {member?.familyDetails?.familyName || "—"}
                         </TableCell>
@@ -457,7 +469,7 @@ export function EventParticipantsDialog({
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium text-foreground truncate">{displayName(m)}</p>
                                 <p className="text-xs text-muted-foreground">
-                                  {m.memberId}{m.phone ? ` · ${m.phone}` : ""}
+                                  {m.memberId}{m.phone ? ` · ${m.phone}` : ""}{calcAge(m.dob) !== null ? ` · ${calcAge(m.dob)} yrs` : ""}
                                 </p>
                               </div>
                             </label>

@@ -38,8 +38,8 @@ export async function GET(req: NextRequest) {
         skip,
         take: limit,
         orderBy: [
-          { gender: "asc" },      // Sort by gender (FEMALE, MALE, OTHER alphabetically)
-          { dob: "desc" }         // Then by age (oldest first, i.e., earliest DOB first)
+          { firstName: "asc" },
+          { surname: "asc" },
         ],
         include: {
           family: true

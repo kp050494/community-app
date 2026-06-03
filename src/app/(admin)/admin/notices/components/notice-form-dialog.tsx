@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
@@ -35,14 +35,25 @@ import { Switch } from "@/components/ui/switch"
 
 type NoticeFormValues = z.input<typeof noticeCreateSchema>
 
+type InitialData = {
+  id: string
+  title: string
+  priority: string
+  expiryDate: string | null
+  isVisible: boolean
+  createdAt: string
+}
+
 interface NoticeFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
+  initialData?: InitialData
 }
 
-export function NoticeFormDialog({ open, onOpenChange, onSuccess }: NoticeFormDialogProps) {
+export function NoticeFormDialog({ open, onOpenChange, onSuccess, initialData }: NoticeFormDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const isEdit = !!initialData?.id
 
   const form = useForm<NoticeFormValues>({
     resolver: zodResolver(noticeCreateSchema),
@@ -56,25 +67,53 @@ export function NoticeFormDialog({ open, onOpenChange, onSuccess }: NoticeFormDi
     },
   })
 
+  // When the dialog opens in edit mode, prefill fields
+  useEffect(() => {
+    if (open && isEdit && initialData) {
+      // Fetch the full notice (includes description & attachmentUrl)
+      fetch(`/api/notices/${initialData.id}`)
+        .then(r => r.json())
+        .then(data => {
+          const n = data.data
+          if (!n) return
+          form.reset({
+            title: n.title ?? "",
+            description: n.description ?? "",
+            priority: n.priority ?? "MEDIUM",
+            attachmentUrl: n.attachmentUrl ?? "",
+            expiryDate: n.expiryDate ? new Date(n.expiryDate).toISOString().slice(0, 10) : "",
+            isVisible: n.isVisible ?? true,
+          })
+        })
+        .catch(() => {})
+    } else if (!open) {
+      form.reset({
+        title: "", description: "", priority: "MEDIUM",
+        attachmentUrl: "", expiryDate: "", isVisible: true,
+      })
+    }
+  }, [open, isEdit, initialData, form])
+
   const onSubmit = async (data: NoticeFormValues) => {
     try {
       setIsSubmitting(true)
-      
       const payload = {
         ...data,
         attachmentUrl: data.attachmentUrl || null,
         expiryDate: data.expiryDate || null,
       }
 
-      const res = await fetch("/api/notices", {
-        method: "POST",
+      const url = isEdit ? `/api/notices/${initialData!.id}` : "/api/notices"
+      const method = isEdit ? "PUT" : "POST"
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
 
-      if (!res.ok) throw new Error("Failed to create notice")
-      
-      form.reset()
+      if (!res.ok) throw new Error(isEdit ? "Failed to update notice" : "Failed to create notice")
+
       onSuccess()
       onOpenChange(false)
     } catch (error) {
@@ -88,15 +127,19 @@ export function NoticeFormDialog({ open, onOpenChange, onSuccess }: NoticeFormDi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] bg-card border-border/50 max-h-[90vh] overflow-y-auto premium-scrollbar">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-heading text-foreground">Add New Announcement</DialogTitle>
+          <DialogTitle className="text-2xl font-heading text-foreground">
+            {isEdit ? "Edit Notice" : "Add New Announcement"}
+          </DialogTitle>
           <DialogDescription>
-            Publish an official update, regulatory guideline, or committee decision.
+            {isEdit
+              ? "Update the notice details below."
+              : "Publish an official update, regulatory guideline, or committee decision."}
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-4">
-            
+
             <FormField
               control={form.control}
               name="title"
@@ -118,10 +161,10 @@ export function NoticeFormDialog({ open, onOpenChange, onSuccess }: NoticeFormDi
                 <FormItem>
                   <FormLabel>Full Notice Content <span className="text-destructive">*</span></FormLabel>
                   <FormControl>
-                    <textarea 
-                      rows={6} 
-                      placeholder="Write the complete announcement contents..." 
-                      {...field} 
+                    <textarea
+                      rows={6}
+                      placeholder="Write the complete announcement contents..."
+                      {...field}
                       className="w-full px-4 py-3 bg-background/50 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm text-foreground resize-none"
                     />
                   </FormControl>
@@ -206,7 +249,9 @@ export function NoticeFormDialog({ open, onOpenChange, onSuccess }: NoticeFormDi
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting} className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[120px]">
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Publish Notice"}
+                {isSubmitting
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : isEdit ? "Save Changes" : "Publish Notice"}
               </Button>
             </div>
           </form>

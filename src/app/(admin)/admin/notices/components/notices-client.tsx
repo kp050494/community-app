@@ -1,20 +1,16 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { 
-  Search, Plus, MoreHorizontal, 
-  FileEdit, Trash2, Eye, Bell, Calendar
+import {
+  Search, Plus,
+  FileEdit, Trash2, Eye, Bell,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
-  Table, TableBody, TableCell, TableHead, 
+  Table, TableBody, TableCell, TableHead,
   TableHeader, TableRow,
 } from "@/components/ui/table"
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, 
-  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { NoticeFormDialog } from "./notice-form-dialog"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { formatDate } from "@/lib/utils"
@@ -34,6 +30,7 @@ export function NoticesClient() {
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editNotice, setEditNotice] = useState<NoticeItem | null>(null)
   const { t } = useLanguage()
   const n = t.admin.notices
 
@@ -88,10 +85,11 @@ export function NoticesClient() {
 
   return (
     <div className="space-y-6">
-      <NoticeFormDialog 
-        open={isDialogOpen} 
-        onOpenChange={setIsDialogOpen} 
-        onSuccess={fetchNotices} 
+      <NoticeFormDialog
+        open={isDialogOpen}
+        onOpenChange={(v) => { setIsDialogOpen(v); if (!v) setEditNotice(null) }}
+        onSuccess={fetchNotices}
+        initialData={editNotice ?? undefined}
       />
 
       {/* Action Bar */}
@@ -180,31 +178,29 @@ export function NoticesClient() {
                     />
                   </TableCell>
                   <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger render={<Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity" />}>
-                        <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-[160px] bg-card border-border shadow-xl">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem className="cursor-pointer">
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Notice
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer text-primary">
-                          <FileEdit className="mr-2 h-4 w-4" />
-                          Edit Details
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          onClick={() => handleDelete(notice.id)}
-                          className="cursor-pointer text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        title="View / Edit Notice"
+                        onClick={() => { setEditNotice(notice); setIsDialogOpen(true) }}
+                        className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      <button
+                        title="Edit Notice"
+                        onClick={() => { setEditNotice(notice); setIsDialogOpen(true) }}
+                        className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        <FileEdit className="h-4 w-4" />
+                      </button>
+                      <button
+                        title="Delete Notice"
+                        onClick={() => handleDelete(notice.id)}
+                        className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import {
   Search, Plus,
-  FileEdit, Trash2, Eye, Users
+  FileEdit, Trash2, Eye, Users, Download, Loader2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -39,6 +39,8 @@ export function FamiliesClient() {
   const [familyDialogData, setFamilyDialogData] = useState<Family | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [detailsFamily, setDetailsFamily] = useState<Family | null>(null)
+  const [isExportingAll, setIsExportingAll] = useState(false)
+  const [exportingFamilyId, setExportingFamilyId] = useState<string | null>(null)
   const { t } = useLanguage()
   const f = t.admin.families
 
@@ -82,6 +84,86 @@ export function FamiliesClient() {
       return
     }
     fetchFamilies()
+  }
+
+  const buildFamilyCSV = (familyList: Family[], members: any[]) => {
+    const toCSV = (val: any) => `"${String(val ?? "").replace(/"/g, '""')}"`
+    const headers = [
+      "Family ID", "Family Name", "Business Name", "Kutch Vatan", "Current City",
+      "Business Address", "Notes", "Total Members",
+      "Member ID", "Member Name", "Gender", "Date of Birth", "Age",
+      "Blood Group", "Phone", "Email", "Education", "Occupation", "Status"
+    ]
+    const rows: string[] = [headers.map(toCSV).join(",")]
+
+    for (const fam of familyList) {
+      const famMembers = members.filter((m: any) => m.familyDetails?.id === fam.id || m.familyId === fam.id)
+      if (famMembers.length === 0) {
+        rows.push([
+          fam.familyId, fam.familyName, fam.businessName || "", fam.kutchVatan || "",
+          fam.currentCity || "", fam.businessAddress || "", fam.notes || "", fam._count.members,
+          "", "", "", "", "", "", "", "", "", "", ""
+        ].map(toCSV).join(","))
+      } else {
+        famMembers.forEach((mbr: any, idx: number) => {
+          const age = mbr.dob ? Math.floor((Date.now() - new Date(mbr.dob).getTime()) / (365.25 * 24 * 3600 * 1000)) : ""
+          rows.push([
+            idx === 0 ? fam.familyId : "",
+            idx === 0 ? fam.familyName : "",
+            idx === 0 ? (fam.businessName || "") : "",
+            idx === 0 ? (fam.kutchVatan || "") : "",
+            idx === 0 ? (fam.currentCity || "") : "",
+            idx === 0 ? (fam.businessAddress || "") : "",
+            idx === 0 ? (fam.notes || "") : "",
+            idx === 0 ? fam._count.members : "",
+            mbr.memberId || "", mbr.fullName || [mbr.firstName, mbr.surname].filter(Boolean).join(" ") || "",
+            mbr.gender || "",
+            mbr.dob ? new Date(mbr.dob).toLocaleDateString("en-IN") : "",
+            age, mbr.bloodGroup || "", mbr.phone || "", mbr.email || "",
+            mbr.education || "", mbr.occupationRole || "",
+            mbr.isActive ? "Active" : "Inactive"
+          ].map(toCSV).join(","))
+        })
+      }
+      rows.push("")  // blank row between families
+    }
+    return rows.join("\n")
+  }
+
+  const handleExportFamily = async (family: Family) => {
+    setExportingFamilyId(family.id)
+    try {
+      const res = await fetch(`/api/members?familyId=${family.id}&limit=1000`)
+      const data = await res.json()
+      const csv = buildFamilyCSV([family], data.data || [])
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${family.familyName.replace(/\s+/g, "_")}_${family.familyId}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setExportingFamilyId(null)
+    }
+  }
+
+  const handleExportAllFamilies = async () => {
+    setIsExportingAll(true)
+    try {
+      const res = await fetch("/api/members?limit=100000")
+      const data = await res.json()
+      const csv = buildFamilyCSV(families, data.data || [])
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `all-families-${new Date().toISOString().slice(0, 10)}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setIsExportingAll(false)
+    }
   }
 
   return (
@@ -136,6 +218,15 @@ export function FamiliesClient() {
           </div>
         </div>
         <div className="flex items-center space-x-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            className="w-full sm:w-auto bg-background/50"
+            onClick={handleExportAllFamilies}
+            disabled={isExportingAll || families.length === 0}
+          >
+            {isExportingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+            {isExportingAll ? "Exporting..." : "Export All"}
+          </Button>
           <Button
             onClick={handleCreateFamily}
             className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20"
@@ -218,6 +309,16 @@ export function FamiliesClient() {
                         className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                       >
                         <Eye className="h-4 w-4" />
+                      </button>
+                      <button
+                        title="Export Family CSV"
+                        onClick={() => handleExportFamily(family)}
+                        disabled={exportingFamilyId === family.id}
+                        className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-500 transition-colors disabled:opacity-50"
+                      >
+                        {exportingFamilyId === family.id
+                          ? <Loader2 className="h-4 w-4 animate-spin" />
+                          : <Download className="h-4 w-4" />}
                       </button>
                       <button
                         title="Edit Details"
