@@ -15,12 +15,14 @@ import { FamilyDetailsDialog } from "./family-details-dialog"
 import { FamilyFormDialog } from "./family-form-dialog"
 import { formatDate } from "@/lib/utils"
 import { useLanguage } from "@/lib/language-context"
+import { getCached, setCached, invalidateCache } from "@/lib/client-cache"
 
 type Family = {
   id: string
   familyId: string
   businessName: string
   familyName: string
+  gotra: string | null
   kutchVatan: string | null
   currentCity: string | null
   businessAddress: string | null
@@ -31,10 +33,15 @@ type Family = {
   }
 }
 
+const PAGE_SIZE = 15
+
 export function FamiliesClient() {
   const [families, setFamilies] = useState<Family[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
   const [familyDialogOpen, setFamilyDialogOpen] = useState(false)
   const [familyDialogData, setFamilyDialogData] = useState<Family | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
@@ -44,16 +51,28 @@ export function FamiliesClient() {
   const { t } = useLanguage()
   const f = t.admin.families
 
-  useEffect(() => {
-    fetchFamilies()
-  }, [])
+  // Single source of truth: fetch whenever page or search changes (search resets page via the input handler).
+  useEffect(() => { fetchFamilies(currentPage, searchTerm) }, [currentPage, searchTerm])
 
-  const fetchFamilies = async () => {
+  const fetchFamilies = async (page: number, search: string) => {
+    const cacheKey = `families:${page}:${search}`
+    const cached = getCached(cacheKey)
+    if (cached) {
+      setFamilies(cached.data); setTotal(cached.total); setTotalPages(cached.totalPages)
+      setIsLoading(false)
+      // Background revalidate
+      fetch(`/api/families?page=${page}&limit=${PAGE_SIZE}${search ? `&search=${encodeURIComponent(search)}` : ""}`, { cache: "no-store" })
+        .then(r => r.json()).then(d => { if (d.data) { setCached(cacheKey, d); setFamilies(d.data); setTotal(d.total); setTotalPages(d.totalPages) } }).catch(() => {})
+      return
+    }
     try {
       setIsLoading(true)
-      const res = await fetch("/api/families")
+      const res = await fetch(`/api/families?page=${page}&limit=${PAGE_SIZE}${search ? `&search=${encodeURIComponent(search)}` : ""}`, { cache: "no-store" })
       const data = await res.json()
       setFamilies(data.data || [])
+      setTotal(data.total || 0)
+      setTotalPages(data.totalPages || 1)
+      setCached(cacheKey, data)
     } catch (error) {
       console.error("Failed to fetch families:", error)
     } finally {
@@ -61,35 +80,25 @@ export function FamiliesClient() {
     }
   }
 
-  const handleCreateFamily = () => {
-    setFamilyDialogData(null)
-    setFamilyDialogOpen(true)
-  }
-
-  const handleEditFamily = (family: Family) => {
-    setFamilyDialogData(family)
-    setFamilyDialogOpen(true)
-  }
-
-  const handleViewFamily = (family: Family) => {
-    setDetailsFamily(family)
-    setDetailsOpen(true)
-  }
+  const handleCreateFamily = () => { setFamilyDialogData(null); setFamilyDialogOpen(true) }
+  const handleEditFamily = (family: Family) => { setFamilyDialogData(family); setFamilyDialogOpen(true) }
+  const handleViewFamily = (family: Family) => { setDetailsFamily(family); setDetailsOpen(true) }
+  const handlePageChange = (p: number) => { if (p < 1 || p > totalPages) return; setCurrentPage(p) }
 
   const handleDeleteFamily = async (id: string) => {
     if (!confirm(f.confirmDelete)) return
     const res = await fetch(`/api/families/${id}`, { method: "DELETE" })
-    if (!res.ok) {
-      alert(f.deleteFailed)
-      return
-    }
-    fetchFamilies()
+    if (!res.ok) { alert(f.deleteFailed); return }
+    invalidateCache("families:")
+    const newPage = families.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage
+    setCurrentPage(newPage)
+    fetchFamilies(newPage, searchTerm)
   }
 
   const buildFamilyCSV = (familyList: Family[], members: any[]) => {
     const toCSV = (val: any) => `"${String(val ?? "").replace(/"/g, '""')}"`
     const headers = [
-      "Family ID", "Family Name", "Business Name", "Kutch Vatan", "Current City",
+      "Family ID", "Family Name", "Business Name", "Gotra", "Kutch Vatan", "Current City",
       "Business Address", "Notes", "Total Members",
       "Member ID", "Member Name", "Gender", "Date of Birth", "Age",
       "Blood Group", "Phone", "Email", "Education", "Occupation", "Status"
@@ -100,7 +109,7 @@ export function FamiliesClient() {
       const famMembers = members.filter((m: any) => m.familyDetails?.id === fam.id || m.familyId === fam.id)
       if (famMembers.length === 0) {
         rows.push([
-          fam.familyId, fam.familyName, fam.businessName || "", fam.kutchVatan || "",
+          fam.familyId, fam.familyName, fam.businessName || "", fam.gotra || "", fam.kutchVatan || "",
           fam.currentCity || "", fam.businessAddress || "", fam.notes || "", fam._count.members,
           "", "", "", "", "", "", "", "", "", "", ""
         ].map(toCSV).join(","))
@@ -111,6 +120,7 @@ export function FamiliesClient() {
             idx === 0 ? fam.familyId : "",
             idx === 0 ? fam.familyName : "",
             idx === 0 ? (fam.businessName || "") : "",
+            idx === 0 ? (fam.gotra || "") : "",
             idx === 0 ? (fam.kutchVatan || "") : "",
             idx === 0 ? (fam.currentCity || "") : "",
             idx === 0 ? (fam.businessAddress || "") : "",
@@ -168,15 +178,16 @@ export function FamiliesClient() {
 
   return (
     <div className="space-y-6">
-      <FamilyFormDialog 
-        open={familyDialogOpen} 
-        onOpenChange={setFamilyDialogOpen} 
-        onSuccess={fetchFamilies} 
+      <FamilyFormDialog
+        open={familyDialogOpen}
+        onOpenChange={setFamilyDialogOpen}
+        onSuccess={() => { invalidateCache("families:"); fetchFamilies(currentPage, searchTerm) }}
         initialData={familyDialogData ? {
           id: familyDialogData.id,
           familyId: familyDialogData.familyId,
           businessName: familyDialogData.businessName ?? "",
           familyName: familyDialogData.familyName,
+          gotra: familyDialogData.gotra ?? "",
           kutchVatan: familyDialogData.kutchVatan ?? "",
           currentCity: familyDialogData.currentCity ?? "",
           businessAddress: familyDialogData.businessAddress ?? "",
@@ -212,7 +223,7 @@ export function FamiliesClient() {
             <Input
               placeholder={f.searchPlaceholder}
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1) }}
               className="pl-9 bg-background/50 border-border/50 focus:border-primary"
             />
           </div>
@@ -341,6 +352,23 @@ export function FamiliesClient() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Pagination Footer */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {total === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, total)} of{" "}
+          <span className="font-semibold text-foreground">{total}</span> {f.colMembers === "Members" ? "families" : "પરિવારો"}
+        </p>
+        <div className="flex items-center space-x-2">
+          <Button variant="outline" size="sm" disabled={currentPage <= 1 || isLoading} onClick={() => handlePageChange(currentPage - 1)}>
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground px-1">{currentPage} / {totalPages}</span>
+          <Button variant="outline" size="sm" disabled={currentPage >= totalPages || isLoading} onClick={() => handlePageChange(currentPage + 1)}>
+            Next
+          </Button>
+        </div>
       </div>
     </div>
   )

@@ -23,6 +23,13 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
 
     const fullName = formatMemberFullName(member.firstName, member.surname, member.fullName)
 
+    // Fetch fields not yet in the Prisma client cache via raw SQL
+    const extraRow: { middleName: string | null; yskId: string | null; yuvaSanghFamilyId: string | null; maritalStatus: string | null }[] =
+      await prisma.$queryRawUnsafe(
+        `SELECT "middleName", "yskId", "yuvaSanghFamilyId", "maritalStatus" FROM members WHERE id = $1`,
+        params.id
+      )
+
     return NextResponse.json({
       data: {
         ...member,
@@ -30,6 +37,10 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
         surname: member.surname ?? "",
         fullName,
         age: member.dob ? calculateAge(member.dob) : null,
+        middleName: extraRow[0]?.middleName ?? null,
+        yskId: extraRow[0]?.yskId ?? null,
+        yuvaSanghFamilyId: extraRow[0]?.yuvaSanghFamilyId ?? null,
+        maritalStatus: extraRow[0]?.maritalStatus ?? null,
       },
     })
   } catch (error) {
@@ -79,14 +90,25 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       include: { family: true },
     })
 
-    // Save middleName via raw SQL (bypasses Prisma client validation until next full regeneration)
+    // Save fields not yet in the Prisma client cache via raw SQL (bypasses client validation until next full regeneration)
     await prisma.$executeRawUnsafe(
-      `UPDATE members SET "middleName" = $1 WHERE id = $2`,
+      `UPDATE members SET "middleName" = $1, "yskId" = $2, "yuvaSanghFamilyId" = $3, "maritalStatus" = $4 WHERE id = $5`,
       body.middleName || null,
+      body.yskId || null,
+      body.yuvaSanghFamilyId || null,
+      body.maritalStatus || null,
       params.id
     )
 
-    return NextResponse.json({ data: { ...member, middleName: body.middleName || null } })
+    return NextResponse.json({
+      data: {
+        ...member,
+        middleName: body.middleName || null,
+        yskId: body.yskId || null,
+        yuvaSanghFamilyId: body.yuvaSanghFamilyId || null,
+        maritalStatus: body.maritalStatus || null,
+      },
+    })
   } catch (error) {
     console.error("Error updating member:", error)
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })

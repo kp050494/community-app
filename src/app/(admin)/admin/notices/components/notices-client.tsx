@@ -15,6 +15,7 @@ import { NoticeFormDialog } from "./notice-form-dialog"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { formatDate } from "@/lib/utils"
 import { useLanguage } from "@/lib/language-context"
+import { getCached, setCached, invalidateCache } from "@/lib/client-cache"
 
 type NoticeItem = {
   id: string
@@ -39,11 +40,19 @@ export function NoticesClient() {
   }, [])
 
   const fetchNotices = async () => {
+    const cacheKey = "notices:list"
+    const cached = getCached(cacheKey)
+    if (cached) {
+      setNotices(cached); setIsLoading(false)
+      fetch("/api/notices?limit=100").then(r => r.json()).then(d => { if (d.data) { setCached(cacheKey, d.data); setNotices(d.data) } }).catch(() => {})
+      return
+    }
     try {
       setIsLoading(true)
-      const res = await fetch("/api/notices")
+      const res = await fetch("/api/notices?limit=100")
       const data = await res.json()
       setNotices(data.data || [])
+      setCached(cacheKey, data.data || [])
     } catch (error) {
       console.error("Failed to fetch notices:", error)
     } finally {
@@ -56,6 +65,7 @@ export function NoticesClient() {
     try {
       const res = await fetch(`/api/notices/${id}`, { method: "DELETE" })
       if (res.ok) {
+        invalidateCache("notices:")
         fetchNotices()
       } else {
         alert("Failed to delete notice")
@@ -73,13 +83,13 @@ export function NoticesClient() {
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
       case "URGENT":
-        return <StatusBadge status="error" size="sm" />
+        return <StatusBadge status="error" size="sm" label="Urgent" />
       case "HIGH":
-        return <StatusBadge status="warning" size="sm" />
+        return <StatusBadge status="warning" size="sm" label="High" />
       case "MEDIUM":
-        return <StatusBadge status="info" size="sm" />
+        return <StatusBadge status="info" size="sm" label="Medium" />
       default:
-        return <StatusBadge status="pending" size="sm" />
+        return <StatusBadge status="pending" size="sm" label="Low" />
     }
   }
 
@@ -88,7 +98,7 @@ export function NoticesClient() {
       <NoticeFormDialog
         open={isDialogOpen}
         onOpenChange={(v) => { setIsDialogOpen(v); if (!v) setEditNotice(null) }}
-        onSuccess={fetchNotices}
+        onSuccess={() => { invalidateCache("notices:"); fetchNotices() }}
         initialData={editNotice ?? undefined}
       />
 
@@ -172,9 +182,10 @@ export function NoticesClient() {
                     {getPriorityBadge(notice.priority)}
                   </TableCell>
                   <TableCell>
-                    <StatusBadge 
-                      status={notice.isVisible ? 'success' : 'error'} 
+                    <StatusBadge
+                      status={notice.isVisible ? 'success' : 'error'}
                       size="sm"
+                      label={notice.isVisible ? 'Visible' : 'Hidden'}
                     />
                   </TableCell>
                   <TableCell className="text-right">

@@ -48,20 +48,21 @@ export async function GET(req: NextRequest) {
       prisma.member.count({ where })
     ])
 
-    // Fetch middleName separately via raw SQL since Prisma client cache may not have the field yet
+    // Fetch fields not yet in the Prisma client cache separately via raw SQL
     const memberIds = members.map(m => m.id)
-    const middleNames: { id: string; middleName: string | null }[] =
+    const extraFields: { id: string; middleName: string | null; yskId: string | null; yuvaSanghFamilyId: string | null; maritalStatus: string | null }[] =
       memberIds.length > 0
         ? await prisma.$queryRawUnsafe(
-            `SELECT id, "middleName" FROM members WHERE id = ANY($1::text[])`,
+            `SELECT id, "middleName", "yskId", "yuvaSanghFamilyId", "maritalStatus" FROM members WHERE id = ANY($1::text[])`,
             memberIds
           )
         : []
-    const middleNameMap = new Map(middleNames.map(r => [r.id, r.middleName]))
+    const extraMap = new Map(extraFields.map(r => [r.id, r]))
 
     const mappedMembers = members.map(m => {
       const age = m.dob ? calculateAge(m.dob) : null
-      const middleName = middleNameMap.get(m.id) ?? null
+      const extra = extraMap.get(m.id)
+      const middleName = extra?.middleName ?? null
       const fullName = formatMemberFullName(m.firstName, m.surname, m.fullName)
       return {
         ...m,
@@ -70,6 +71,9 @@ export async function GET(req: NextRequest) {
         surname: m.surname ?? "",
         fullName,
         age,
+        yskId: extra?.yskId ?? null,
+        yuvaSanghFamilyId: extra?.yuvaSanghFamilyId ?? null,
+        maritalStatus: extra?.maritalStatus ?? null,
         telephoneNumber: m.phone,
         familyDetails: {
           id: m.family.id,
@@ -83,13 +87,9 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    return NextResponse.json({
-      data: mappedMembers,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit)
-    })
+    const res = NextResponse.json({ data: mappedMembers, total, page, limit, totalPages: Math.ceil(total / limit) })
+    res.headers.set("Cache-Control", "private, max-age=20, stale-while-revalidate=60")
+    return res
   } catch (error) {
     console.error("Error fetching members:", error)
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
@@ -140,16 +140,23 @@ export async function POST(req: NextRequest) {
       include: { family: true }
     })
 
-    // Save middleName via raw SQL (bypasses Prisma client validation until next full regeneration)
-    if (body.middleName) {
-      await prisma.$executeRawUnsafe(
-        `UPDATE members SET "middleName" = $1 WHERE id = $2`,
-        body.middleName,
-        member.id
-      )
-    }
+    // Save fields not yet in the Prisma client cache via raw SQL (bypasses client validation until next full regeneration)
+    await prisma.$executeRawUnsafe(
+      `UPDATE members SET "middleName" = $1, "yskId" = $2, "yuvaSanghFamilyId" = $3, "maritalStatus" = $4 WHERE id = $5`,
+      body.middleName || null,
+      body.yskId || null,
+      body.yuvaSanghFamilyId || null,
+      body.maritalStatus || null,
+      member.id
+    )
 
-    return NextResponse.json({ ...member, middleName: body.middleName || null }, { status: 201 })
+    return NextResponse.json({
+      ...member,
+      middleName: body.middleName || null,
+      yskId: body.yskId || null,
+      yuvaSanghFamilyId: body.yuvaSanghFamilyId || null,
+      maritalStatus: body.maritalStatus || null,
+    }, { status: 201 })
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error("Error creating member:", msg)

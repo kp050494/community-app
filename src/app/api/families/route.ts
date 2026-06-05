@@ -43,13 +43,21 @@ export async function GET(req: NextRequest) {
       prisma.family.count({ where })
     ])
 
-    return NextResponse.json({
-      data: families,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit)
-    })
+    // Fetch gotra separately via raw SQL since the Prisma client cache may not have the field yet
+    const familyIds = families.map(f => f.id)
+    const gotras: { id: string; gotra: string | null }[] =
+      familyIds.length > 0
+        ? await prisma.$queryRawUnsafe(
+            `SELECT id, "gotra" FROM families WHERE id = ANY($1::text[])`,
+            familyIds
+          )
+        : []
+    const gotraMap = new Map(gotras.map(r => [r.id, r.gotra]))
+    const mappedFamilies = families.map(f => ({ ...f, gotra: gotraMap.get(f.id) ?? null }))
+
+    const res = NextResponse.json({ data: mappedFamilies, total, page, limit, totalPages: Math.ceil(total / limit) })
+    res.headers.set("Cache-Control", "private, max-age=30, stale-while-revalidate=60")
+    return res
   } catch (error) {
     console.error("Error fetching families:", error)
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
@@ -98,7 +106,16 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    return NextResponse.json(family, { status: 201 })
+    // Save gotra via raw SQL (bypasses Prisma client validation until next full regeneration)
+    if (body.gotra) {
+      await prisma.$executeRawUnsafe(
+        `UPDATE families SET "gotra" = $1 WHERE id = $2`,
+        body.gotra,
+        family.id
+      )
+    }
+
+    return NextResponse.json({ ...family, gotra: body.gotra || null }, { status: 201 })
   } catch (error) {
     console.error("Error creating family:", error)
     if (error instanceof Error && error.message.includes("Unique constraint failed")) {

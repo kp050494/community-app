@@ -9,6 +9,9 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const priority = searchParams.get("priority") || ""
     const search = searchParams.get("search") || ""
+    const page = parseInt(searchParams.get("page") || "1")
+    const limit = parseInt(searchParams.get("limit") || "20")
+    const skip = (page - 1) * limit
 
     const where = {
       AND: [
@@ -22,12 +25,26 @@ export async function GET(req: NextRequest) {
       ]
     }
 
-    const notices = await prisma.notice.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-    })
+    const [notices, total] = await Promise.all([
+      prisma.notice.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.notice.count({ where })
+    ])
 
-    return NextResponse.json({ success: true, data: notices })
+    const res = NextResponse.json({
+      success: true,
+      data: notices,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    })
+    res.headers.set("Cache-Control", "private, max-age=30, stale-while-revalidate=60")
+    return res
   } catch (error) {
     console.error("Error fetching notices:", error)
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })

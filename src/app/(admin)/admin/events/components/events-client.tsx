@@ -14,6 +14,7 @@ import {
 import { EventFormDialog } from "./event-form-dialog"
 import { EventParticipantsDialog } from "./event-participants-dialog"
 import { useLanguage } from "@/lib/language-context"
+import { getCached, setCached, invalidateCache } from "@/lib/client-cache"
 
 type EventItem = {
   id: string
@@ -44,11 +45,19 @@ export function EventsClient() {
   }, [])
 
   const fetchEvents = async () => {
+    const cacheKey = "events:list"
+    const cached = getCached(cacheKey)
+    if (cached) {
+      setEvents(cached); setIsLoading(false)
+      fetch("/api/events?limit=100").then(r => r.json()).then(d => { if (d.data) { setCached(cacheKey, d.data); setEvents(d.data) } }).catch(() => {})
+      return
+    }
     try {
       setIsLoading(true)
-      const res = await fetch("/api/events")
+      const res = await fetch("/api/events?limit=100")
       const data = await res.json()
       setEvents(data.data || [])
+      setCached(cacheKey, data.data || [])
     } catch (error) {
       console.error("Failed to fetch events:", error)
     } finally {
@@ -61,6 +70,7 @@ export function EventsClient() {
     try {
       const res = await fetch(`/api/events/${id}`, { method: "DELETE" })
       if (res.ok) {
+        invalidateCache("events:")
         fetchEvents()
       } else {
         alert(e.deleteFailed)

@@ -61,6 +61,9 @@ const defaultValues: MemberFormValues = {
   email: "",
   education: "",
   occupationRole: "",
+  yskId: "",
+  yuvaSanghFamilyId: "",
+  maritalStatus: "" as any,
   isActive: true,
 }
 
@@ -95,7 +98,7 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess, initialData }:
   const loadFamilies = async () => {
     try {
       setIsLoadingFamilies(true)
-      const res = await fetch("/api/families")
+      const res = await fetch("/api/families", { cache: "no-store" })
       const data = await res.json()
       setFamilies(data.data || [])
     } catch (error) {
@@ -432,6 +435,74 @@ export function MemberFormDialog({ open, onOpenChange, onSuccess, initialData }:
                   )}
                 />
               </div>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-border">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-primary">Yuva Sangh Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="yskId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>YSK ID</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. YSK-001" {...field} className="bg-background/50" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="yuvaSanghFamilyId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Yuva Sangh Family ID</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. YSF-001" {...field} className="bg-background/50" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name="maritalStatus"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Marital Status</FormLabel>
+                    <FormControl>
+                      <div className="flex items-center gap-6 pt-1">
+                        <label className="flex items-center gap-2 cursor-pointer text-sm text-foreground">
+                          <input
+                            type="radio"
+                            name="maritalStatus"
+                            value="MARRIED"
+                            checked={field.value === "MARRIED"}
+                            onChange={() => field.onChange("MARRIED")}
+                            className="h-4 w-4 accent-primary"
+                          />
+                          Married
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer text-sm text-foreground">
+                          <input
+                            type="radio"
+                            name="maritalStatus"
+                            value="UNMARRIED"
+                            checked={field.value === "UNMARRIED"}
+                            onChange={() => field.onChange("UNMARRIED")}
+                            className="h-4 w-4 accent-primary"
+                          />
+                          Unmarried
+                        </label>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             {submitError && (

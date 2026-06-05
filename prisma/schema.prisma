@@ -81,6 +81,7 @@ model Family {
   familyId         String              // User-provided unique identifier
   businessName     String?             // Business name
   familyName       String              // Family name
+  gotra            String?             // Gotra
   kutchVatan       String?             // Kutch origin
   currentCity      String?             // Current city
   businessAddress  String?             // Business address
@@ -120,6 +121,9 @@ model Member {
   email             String?
   education         String?
   occupationRole    String?                // Occupation/Business Role
+  yskId             String?                // YSK ID
+  yuvaSanghFamilyId String?                // Yuva Sangh Family ID
+  maritalStatus     String?                // MARRIED | UNMARRIED
   isActive          Boolean        @default(true)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt

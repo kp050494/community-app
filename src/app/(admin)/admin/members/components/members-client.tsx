@@ -17,6 +17,7 @@ import { formatDate } from "@/lib/utils"
 import { MemberDetailsDialog } from "./member-details-dialog"
 import { MemberFormDialog } from "./member-form-dialog"
 import { useLanguage } from "@/lib/language-context"
+import { getCached, setCached, invalidateCache } from "@/lib/client-cache"
 
 type Member = {
   id: string
@@ -35,6 +36,9 @@ type Member = {
   email?: string | null
   education?: string | null
   occupationRole?: string | null
+  yskId?: string | null
+  yuvaSanghFamilyId?: string | null
+  maritalStatus?: string | null
   familyDetails?: {
     id: string
     familyId: string
@@ -63,26 +67,31 @@ export function MembersClient() {
   const { t } = useLanguage()
   const m = t.admin.members
 
+  // Single source of truth: fetch whenever page or search changes (search resets page via the input handler).
   useEffect(() => {
     fetchMembers(currentPage, searchTerm)
-  }, [currentPage])
-
-  // Reset to page 1 and re-fetch when search changes
-  useEffect(() => {
-    setCurrentPage(1)
-    fetchMembers(1, searchTerm)
-  }, [searchTerm])
+  }, [currentPage, searchTerm])
 
   const fetchMembers = async (page: number, search: string) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
+    if (search) params.set("search", search)
+    const url = `/api/members?${params.toString()}`
+    const cacheKey = `members:${url}`
+    const cached = getCached(cacheKey)
+    if (cached) {
+      setMembers(cached.data); setTotal(cached.total); setTotalPages(cached.totalPages)
+      setIsLoading(false)
+      fetch(url, { cache: "no-store" }).then(r => r.json()).then(d => { if (d.data) { setCached(cacheKey, d); setMembers(d.data); setTotal(d.total); setTotalPages(d.totalPages) } }).catch(() => {})
+      return
+    }
     try {
       setIsLoading(true)
-      const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
-      if (search) params.set("search", search)
-      const res = await fetch(`/api/members?${params.toString()}`)
+      const res = await fetch(url, { cache: "no-store" })
       const data = await res.json()
       setMembers(data.data || [])
       setTotal(data.total || 0)
       setTotalPages(data.totalPages || 1)
+      setCached(cacheKey, data)
     } catch (error) {
       console.error("Failed to fetch members:", error)
     } finally {
@@ -121,6 +130,7 @@ export function MembersClient() {
       const headers = [
         "Member ID", "First Name", "Surname", "Gender", "Date of Birth", "Age",
         "Blood Group", "Phone", "Email", "Address", "Education", "Occupation / Role",
+        "Marital Status", "YSK ID", "Yuva Sangh Family ID",
         "Family ID", "Family Name", "Business Name", "Kutch Vatan", "Current City", "Status", "Joined Date"
       ]
       const toCSV = (val: any) => `"${String(val ?? "").replace(/"/g, '""')}"`
@@ -139,6 +149,9 @@ export function MembersClient() {
           mbr.address || "",
           mbr.education || "",
           mbr.occupationRole || "",
+          mbr.maritalStatus || "",
+          mbr.yskId || "",
+          mbr.yuvaSanghFamilyId || "",
           mbr.familyDetails?.familyId || "",
           mbr.familyDetails?.familyName || "",
           mbr.familyDetails?.businessName || "",
@@ -173,6 +186,7 @@ export function MembersClient() {
       return
     }
     // If last item on page, go back one page
+    invalidateCache("members:")
     const newPage = members.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage
     setCurrentPage(newPage)
     fetchMembers(newPage, searchTerm)
@@ -183,7 +197,7 @@ export function MembersClient() {
       <MemberFormDialog
         open={memberDialogOpen}
         onOpenChange={setMemberDialogOpen}
-        onSuccess={() => fetchMembers(currentPage, searchTerm)}
+        onSuccess={() => { invalidateCache("members:"); fetchMembers(currentPage, searchTerm) }}
         initialData={memberDialogData ? {
           id: memberDialogData.id,
           familyId: memberDialogData.familyDetails?.id ?? "",
@@ -198,6 +212,9 @@ export function MembersClient() {
           address: memberDialogData.address ?? "",
           education: memberDialogData.education ?? "",
           occupationRole: memberDialogData.occupationRole ?? "",
+          yskId: memberDialogData.yskId ?? "",
+          yuvaSanghFamilyId: memberDialogData.yuvaSanghFamilyId ?? "",
+          maritalStatus: (memberDialogData.maritalStatus as "MARRIED" | "UNMARRIED" | "") ?? "",
           isActive: memberDialogData.isActive,
         } : undefined}
       />
@@ -227,7 +244,7 @@ export function MembersClient() {
             <Input
               placeholder={m.searchPlaceholder}
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1) }}
               className="pl-9 bg-background/50 border-border/50 focus:border-primary"
             />
           </div>
@@ -315,9 +332,10 @@ export function MembersClient() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <StatusBadge 
-                      status={member.isActive ? 'success' : 'error'} 
+                    <StatusBadge
+                      status={member.isActive ? 'success' : 'error'}
                       size="sm"
+                      label={member.isActive ? 'Active' : 'Inactive'}
                     />
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">

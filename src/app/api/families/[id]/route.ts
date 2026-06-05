@@ -22,7 +22,13 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
       return NextResponse.json({ error: "Family not found" }, { status: 404 })
     }
 
-    return NextResponse.json({ data: family })
+    // Fetch gotra via raw SQL since the Prisma client cache may not have the field yet
+    const gotraRow: { gotra: string | null }[] = await prisma.$queryRawUnsafe(
+      `SELECT "gotra" FROM families WHERE id = $1`,
+      params.id
+    )
+
+    return NextResponse.json({ data: { ...family, gotra: gotraRow[0]?.gotra ?? null } })
   } catch (error) {
     console.error("Error fetching family:", error)
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
@@ -74,7 +80,14 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       },
     })
 
-    return NextResponse.json({ data: family })
+    // Save gotra via raw SQL (bypasses Prisma client validation until next full regeneration)
+    await prisma.$executeRawUnsafe(
+      `UPDATE families SET "gotra" = $1 WHERE id = $2`,
+      body.gotra || null,
+      params.id
+    )
+
+    return NextResponse.json({ data: { ...family, gotra: body.gotra || null } })
   } catch (error) {
     console.error("Error updating family:", error)
     if (error instanceof Error && error.message.includes("Unique constraint failed")) {

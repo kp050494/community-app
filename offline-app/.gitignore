@@ -1,0 +1,17 @@
+node_modules/
+dist/
+*.local
+
+# Capacitor / Android build artifacts
+android/app/build/
+android/build/
+android/.gradle/
+android/captures/
+android/local.properties
+*.apk
+*.aab
+*.keystore
+
+.DS_Store
+.idea/
+*.iml

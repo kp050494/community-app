@@ -57,12 +57,15 @@ export interface StatusBadgeProps {
   status: StatusType
   size?: "sm" | "md"
   className?: string
+  /** Override the default label (e.g. show "Urgent" instead of "Error" for a red badge). */
+  label?: string
 }
 
 export function StatusBadge({
   status,
   size = "md",
   className,
+  label,
 }: StatusBadgeProps) {
   const config = statusConfig[status]
 
@@ -91,7 +94,7 @@ export function StatusBadge({
           )}
         />
       </span>
-      {config.label}
+      {label ?? config.label}
     </span>
   )
 }
