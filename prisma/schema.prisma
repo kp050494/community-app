@@ -8,6 +8,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
@@ -109,7 +110,7 @@ model Member {
   familyId          String
   family            Family         @relation(fields: [familyId], references: [id], onDelete: Cascade)
   firstName         String?
-  middleName        String?
+  middleName        String?                // Father's / Husband's name
   surname           String?
   fullName          String?         @map("fullName")
   dob               DateTime?
