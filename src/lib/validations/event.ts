@@ -32,6 +32,7 @@ export const eventCreateSchema = z
     bannerUrl: z
       .string()
       .url('Enter a valid banner URL')
+      .or(z.literal(''))
       .optional()
       .nullable(),
     isFeeRequired: z.boolean().default(false),
@@ -44,6 +45,7 @@ export const eventCreateSchema = z
       .string()
       .datetime({ offset: true })
       .or(z.string().date())
+      .or(z.literal(''))
       .optional()
       .nullable(),
     maxAttendees: z
@@ -107,6 +109,7 @@ export const eventUpdateSchema = z
     bannerUrl: z
       .string()
       .url('Enter a valid banner URL')
+      .or(z.literal(''))
       .optional()
       .nullable(),
     isFeeRequired: z.boolean().optional(),
@@ -119,6 +122,7 @@ export const eventUpdateSchema = z
       .string()
       .datetime({ offset: true })
       .or(z.string().date())
+      .or(z.literal(''))
       .optional()
       .nullable(),
     maxAttendees: z

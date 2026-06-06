@@ -55,9 +55,9 @@ export function EventFormDialog({ open, onOpenChange, onSuccess }: EventFormDial
       organizer: "",
       bannerUrl: "",
       isFeeRequired: false,
-      feeAmount: 0,
+      feeAmount: undefined,
       deadline: "",
-      maxAttendees: 0,
+      maxAttendees: undefined,
       status: "DRAFT",
     },
   })
