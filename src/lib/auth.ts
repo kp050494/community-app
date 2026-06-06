@@ -64,7 +64,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }
   },
   session: {
-    strategy: "jwt"
+    strategy: "jwt",
+    maxAge: 60 * 60,      // 1 hour — admin is signed out after this much inactivity
+    updateAge: 5 * 60,    // re-issue the token at most every 5 min when active
   },
   secret: process.env.AUTH_SECRET,
 })
