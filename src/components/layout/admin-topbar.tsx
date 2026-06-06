@@ -1,6 +1,6 @@
 "use client"
 
-import { PanelLeftClose, PanelLeftOpen, Bell, User } from "lucide-react"
+import { PanelLeftClose, PanelLeftOpen, Bell, User, Menu } from "lucide-react"
 import { ThemeToggle } from "@/components/shared/theme-toggle"
 import { LanguageToggle } from "@/components/shared/language-toggle"
 import { Button } from "@/components/ui/button"
@@ -9,14 +9,26 @@ import { useLanguage } from "@/lib/language-context"
 interface AdminTopbarProps {
   sidebarCollapsed: boolean
   onToggleSidebar: () => void
+  onOpenMobile?: () => void
 }
 
-export function AdminTopbar({ sidebarCollapsed, onToggleSidebar }: AdminTopbarProps) {
+export function AdminTopbar({ sidebarCollapsed, onToggleSidebar, onOpenMobile }: AdminTopbarProps) {
   const { t } = useLanguage()
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between h-20 px-6 glass-navbar border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="flex items-center gap-4">
+        {/* Mobile: open the slide-in menu */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onOpenMobile}
+          className="md:hidden text-muted-foreground hover:text-foreground hover:bg-muted"
+          aria-label="Open menu"
+        >
+          <Menu className="w-5 h-5" />
+        </Button>
+        {/* Desktop: collapse/expand the sidebar */}
         <Button
           variant="ghost"
           size="icon"

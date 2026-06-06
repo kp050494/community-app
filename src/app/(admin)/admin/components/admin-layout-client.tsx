@@ -7,10 +7,24 @@ import { cn } from "@/lib/utils"
 
 export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
     <div className="flex min-h-screen bg-background">
-      <AdminSidebar collapsed={sidebarCollapsed} />
+      <AdminSidebar
+        collapsed={sidebarCollapsed}
+        mobileOpen={mobileOpen}
+        onCloseMobile={() => setMobileOpen(false)}
+      />
+
+      {/* Mobile backdrop */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
       <div
         className={cn(
@@ -21,6 +35,7 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
         <AdminTopbar
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+          onOpenMobile={() => setMobileOpen(true)}
         />
 
         <main className="flex-1 p-6 md:p-8 overflow-x-hidden">

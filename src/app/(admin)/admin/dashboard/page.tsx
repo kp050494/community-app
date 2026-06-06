@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { motion } from "motion/react"
 import {
   Users, Home, Calendar, CreditCard,
@@ -20,6 +21,7 @@ type DashboardStats = {
 export default function AdminDashboard() {
   const { t } = useLanguage()
   const d = t.admin.dashboard
+  const router = useRouter()
 
   const [liveStats, setLiveStats] = useState<DashboardStats | null>(null)
 
@@ -69,11 +71,11 @@ export default function AdminDashboard() {
   ]
 
   const quickActions = [
-    { label: d.addNewMember, icon: Users },
-    { label: d.publishNotice, icon: Bell },
-    { label: d.createEvent, icon: Calendar },
-    { label: d.recordPayment, icon: CreditCard },
-    { label: d.generateReport, icon: FileText },
+    { label: d.addNewMember, icon: Users, href: "/admin/members" },
+    { label: d.publishNotice, icon: Bell, href: "/admin/notices" },
+    { label: d.createEvent, icon: Calendar, href: "/admin/events" },
+    { label: d.recordPayment, icon: CreditCard, href: "/admin/payments" },
+    { label: d.generateReport, icon: FileText, href: "/admin/reports" },
   ]
 
   return (
@@ -156,6 +158,7 @@ export default function AdminDashboard() {
             {quickActions.map((action, i) => (
               <button
                 key={i}
+                onClick={() => router.push(action.href)}
                 className="w-full flex items-center gap-3 p-4 rounded-xl bg-muted/50 border border-transparent hover:border-border hover:bg-muted transition-all group text-left"
               >
                 <div className="w-8 h-8 rounded-lg bg-background flex items-center justify-center border border-border group-hover:border-primary/50 group-hover:text-primary transition-colors">

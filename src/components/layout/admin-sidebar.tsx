@@ -14,9 +14,11 @@ import { useLanguage } from "@/lib/language-context"
 
 interface AdminSidebarProps {
   collapsed: boolean
+  mobileOpen?: boolean
+  onCloseMobile?: () => void
 }
 
-export function AdminSidebar({ collapsed }: AdminSidebarProps) {
+export function AdminSidebar({ collapsed, mobileOpen = false, onCloseMobile }: AdminSidebarProps) {
   const pathname = usePathname()
   const { t } = useLanguage()
 
@@ -35,13 +37,15 @@ export function AdminSidebar({ collapsed }: AdminSidebarProps) {
   ]
 
   return (
-    <motion.aside
-      initial={false}
-      animate={{
-        width: collapsed ? 80 : 280,
-        opacity: 1
-      }}
-      className="fixed inset-y-0 left-0 z-40 hidden md:flex flex-col bg-card border-r border-border shadow-xl dark:shadow-none transition-all"
+    <aside
+      className={cn(
+        "fixed inset-y-0 left-0 z-50 flex flex-col bg-card border-r border-border shadow-xl dark:shadow-none transition-all duration-300",
+        // Width: full drawer on mobile; collapsible on desktop
+        collapsed ? "w-20" : "w-[280px]",
+        // Slide in/out on mobile; always visible on desktop
+        mobileOpen ? "translate-x-0" : "-translate-x-full",
+        "md:translate-x-0"
+      )}
     >
       {/* Brand */}
       <div className="flex items-center justify-center h-20 border-b border-border px-3">
@@ -72,6 +76,7 @@ export function AdminSidebar({ collapsed }: AdminSidebarProps) {
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => onCloseMobile?.()}
               className={cn(
                 "flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group relative",
                 isActive
@@ -118,6 +123,6 @@ export function AdminSidebar({ collapsed }: AdminSidebarProps) {
           {!collapsed && <span className="font-medium">{t.admin.nav.signOut}</span>}
         </button>
       </div>
-    </motion.aside>
+    </aside>
   )
 }
