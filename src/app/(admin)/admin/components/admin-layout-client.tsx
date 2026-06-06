@@ -28,7 +28,9 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
 
       <div
         className={cn(
-          "flex-1 flex flex-col transition-all duration-300",
+          // min-w-0 lets this flex column shrink to the viewport so wide tables
+          // scroll inside their own container instead of widening the whole page.
+          "flex-1 flex flex-col min-w-0 transition-all duration-300",
           sidebarCollapsed ? "md:pl-20" : "md:pl-[280px]"
         )}
       >

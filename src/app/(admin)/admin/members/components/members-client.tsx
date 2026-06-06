@@ -252,7 +252,7 @@ export function MembersClient() {
             <Filter className="h-4 w-4" />
           </Button>
         </div>
-        <div className="flex items-center space-x-2 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
           <Button variant="outline" className="w-full sm:w-auto bg-background/50" onClick={handleExportCSV} disabled={isExporting}>
             {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
             {isExporting ? "Exporting..." : m.exportCsv}

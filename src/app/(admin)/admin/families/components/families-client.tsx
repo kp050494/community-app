@@ -228,7 +228,7 @@ export function FamiliesClient() {
             />
           </div>
         </div>
-        <div className="flex items-center space-x-2 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
           <Button
             variant="outline"
             className="w-full sm:w-auto bg-background/50"

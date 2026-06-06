@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { LanguageProvider } from "@/lib/language-context";
@@ -19,6 +19,12 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "SKPPMM - Shree Kutch Kadwa Patidar Pandesara Mitra Mandal",
   description: "Official community management platform for Shree Kutch Kadwa Patidar Pandesara Mitra Mandal (શ્રી કચ્છ કડવા પાટીદાર પાંદેસરા મિત્ર મંડળ).",
+};
+
+// Ensures mobile browsers render at device width so the responsive layout works.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({

@@ -115,7 +115,7 @@ export function NoticesClient() {
             />
           </div>
         </div>
-        <div className="flex items-center space-x-2 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
           <Button 
             onClick={() => setIsDialogOpen(true)}
             className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20"
